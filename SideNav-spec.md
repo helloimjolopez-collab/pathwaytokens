@@ -1,12 +1,18 @@
 # SideNav — Pathway Design System Component Spec
 
-> **Purpose of this document:** Provide a complete, implementation-ready reference for the SideNav component. If you have access to the Figma file (`3sw45aVcngFAmpbP6cfrXP`) and its variable definitions, this document plus those tokens is sufficient to build a pixel-accurate implementation.
+Complete implementation reference for the SideNav component. Covers anatomy, design tokens, states, spacing, interaction patterns, and accessibility. Use alongside the [Figma source](#figma-source) for a pixel-accurate build.
 
 ---
 
 ## 1. Component Overview
 
-The `SideNav` is the primary navigation shell of the Pathway product. It sits on the left edge of the viewport, contains a vertical list of navigation items, and supports two layout states: **expanded** (250px wide, labels visible) and **collapsed** (64px wide, icons only).
+`SideNav.Local` is a persistent vertical panel used across all modules in Ministry Brands Amplify — a church management product. It renders the primary navigation tree for a given module and communicates the user's current location within that tree at all times.
+
+It is **not** global app navigation or top-level product navigation. Each module has its own SideNav instance. It is also not used for action buttons or CTAs — navigation only.
+
+It supports two levels of depth: Level 0 (parent) and Level 1 (child). Level 1 items are always leaf destinations — they never group or expand further. This is a hard constraint enforced at the data layer, not just a design convention.
+
+The component supports two layout states: **expanded** (250px wide, icons and labels visible) and **collapsed** (64px wide, icons only).
 
 ### Figma source
 - **File:** [Pathway Design System Master File MB 2.0](https://www.figma.com/design/3sw45aVcngFAmpbP6cfrXP/)
@@ -514,7 +520,7 @@ The only things that genuinely need to be **done in Figma** (because they are de
 To implement SideNav from scratch with correct design system alignment, provide:
 
 1. **This document**
-2. **Figma variable export** for file `3sw45aVcngFAmpbP6cfrXP` — specifically the token values for `Fill/Contextual/NavItem/*`, `Text/Contextual/NavItem/*`, `Icon/Contextual/NavItem/*`, `Surface/Nav/Light`, `Fill/Static/Info/Subtle`, and `Component/NavItem/Large/Radius/Radius`
+2. **Figma variable export** from the [Pathway Design System file](https://www.figma.com/design/3sw45aVcngFAmpbP6cfrXP/) — specifically the token values for `Fill/Contextual/NavItem/*`, `Text/Contextual/NavItem/*`, `Icon/Contextual/NavItem/*`, `Surface/Nav/Light`, `Fill/Static/Info/Subtle`, and `Component/NavItem/Large/Radius/Radius`
 3. **Icon assets** — either the design system icon React component library, or SVG files for the fill-style icons embedded at build time
 4. **Specific nav content** — the nav items, their labels, icon names, and which are groupers vs destinations
 
