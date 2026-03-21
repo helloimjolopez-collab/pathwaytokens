@@ -307,7 +307,7 @@ When `isSidebarCollapsed = true`:
 
 - All leading icons are **fill-style** (solid/filled, not outline)
 - Icons live at `14×14pt` inside a `24×24pt` `Container.LeadingIcon` wrapper
-- Icon source: design system iconography page (node `40002909:32275` in file `3sw45aVcngFAmpbP6cfrXP`)
+- Icon source: [design system iconography page](https://www.figma.com/design/3sw45aVcngFAmpbP6cfrXP/?node-id=40002909-32275)
 - **Figma CDN asset URLs cannot be used directly in browsers** — they require auth headers that only the Figma MCP server provides. Implementations must either use the design system icon component library or embed SVG assets at build time.
 
 ### Accounting SideNav icon mapping
