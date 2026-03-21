@@ -480,6 +480,8 @@ function SideNav({ activeId, onNavigate }) {
 }
 
 // ─── TOKEN DOCS ───────────────────────────────────────────────────────────────
+// ⚠ KEEP IN SYNC with SideNav-spec.md §§3–4 (Design Tokens + Layout & Spacing).
+// When token values change in Figma, update both this array AND the spec markdown.
 const TOKEN_ROWS = [
   // Surface
   { cat:"Surface", semantic:"Surface/Nav/Light",              prim:"—",        value:"#fafafa",              role:"SideNav container background" },
@@ -703,8 +705,9 @@ function App() {
                   <a href="https://helloimjolopez-collab.github.io/pathwaytokens/SideNav-spec.md"
                     target="_blank" rel="noopener"
                     style={{ display:"inline-flex", alignItems:"center", gap:7,
-                      padding:"9px 18px", borderRadius:8, background:"#3555a0",
-                      color:"#fff", fontSize:13, fontWeight:600, textDecoration:"none",
+                      padding:"7px 14px", borderRadius:8, background:"transparent",
+                      border:"1px solid #b0b8d8", color:"#3555a0",
+                      fontSize:12, fontWeight:500, textDecoration:"none",
                       fontFamily:"'Red Hat Text',sans-serif", whiteSpace:"nowrap",
                       flexShrink:0 }}>
                     View full spec →
