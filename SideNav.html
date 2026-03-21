@@ -688,6 +688,29 @@ function App() {
             );
             return (
               <>
+                {/* ── Spec link ── */}
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
+                  gap:16, background:"transparent", border:"1px solid #dde0ee",
+                  borderRadius:12, padding:"18px 24px", flexWrap:"wrap" }}>
+                  <div>
+                    <p style={{ fontSize:13, fontWeight:600, color:"#02060d", margin:"0 0 3px",
+                      fontFamily:"'Red Hat Text',sans-serif" }}>SideNav — Component Spec</p>
+                    <p style={{ fontSize:12, color:"#8890b0", margin:0,
+                      fontFamily:"'Red Hat Text',sans-serif" }}>
+                      Tokens · anatomy · states · keyboard · ARIA · screen reader strings · Figma gaps
+                    </p>
+                  </div>
+                  <a href="https://helloimjolopez-collab.github.io/pathwaytokens/SideNav-spec.md"
+                    target="_blank" rel="noopener"
+                    style={{ display:"inline-flex", alignItems:"center", gap:7,
+                      padding:"9px 18px", borderRadius:8, background:"#3555a0",
+                      color:"#fff", fontSize:13, fontWeight:600, textDecoration:"none",
+                      fontFamily:"'Red Hat Text',sans-serif", whiteSpace:"nowrap",
+                      flexShrink:0 }}>
+                    View full spec →
+                  </a>
+                </div>
+
                 {/* ── State Logic ── */}
                 <section>
                   <p style={SH}>State Logic</p>
@@ -808,73 +831,6 @@ function App() {
                   </div>
                 </section>
 
-                {/* ── Accessibility Specifications ── */}
-                <section>
-                  <p style={SH}>Accessibility Specifications</p>
-                  <div style={CARD}>
-
-                    {/* Legend */}
-                    <div style={{ display:"flex", gap:20, marginBottom:20,
-                      flexWrap:"wrap", paddingBottom:16, borderBottom:"1px solid #edf0f9" }}>
-                      {[
-                        { ic:<CHK/>, label:"Implemented in this demo",   color:"#166534" },
-                        { ic:<REQ/>, label:"Required in production code", color:"#1e40af" },
-                        { ic:<WRN/>, label:"Gap — not yet in Figma spec", color:"#92400e" },
-                      ].map(({ ic, label, color }) => (
-                        <div key={label} style={{ display:"flex", alignItems:"center", gap:7 }}>
-                          {ic}
-                          <span style={{ fontSize:13, color, fontFamily:"'Red Hat Text',sans-serif",
-                            fontWeight:500 }}>{label}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* ARIA Markup */}
-                    <p style={{...GH, marginTop:4}}>ARIA Markup</p>
-                    {[
-                      { ic:<CHK/>, t:<><span style={CD}>{`<nav aria-label="Primary navigation">`}</span> wraps the entire SideNav container.</> },
-                      { ic:<CHK/>, t:<><span style={CD}>role="button"</span> on every nav item — each <span style={CD}>div</span> is keyboard-reachable via <span style={CD}>tabIndex=0</span>.</> },
-                      { ic:<CHK/>, t:<><span style={CD}>aria-current="page"</span> on the active destination — screen readers announce it as "current page".</> },
-                      { ic:<CHK/>, t:<><span style={CD}>aria-expanded="true/false"</span> on grouper items — communicates open/closed state for sub-menus.</> },
-                      { ic:<CHK/>, t:<><span style={CD}>aria-label="Collapse navigation"</span> / <span style={CD}>"Expand navigation"</span> on the toggle button — updates dynamically.</> },
-                      { ic:<REQ/>, t:<>When collapsed, each icon-only item needs <span style={CD}>aria-label</span> (e.g. "Applications") so screen readers can identify it.</> },
-                      { ic:<REQ/>, t:<>Collapsed-sidebar flyout popovers should use <span style={CD}>role="menu"</span> with each child as <span style={CD}>role="menuitem"</span>.</> },
-                      { ic:<REQ/>, t:<>Use <span style={CD}>{`<ul>`}</span>/<span style={CD}>{`<li>`}</span> list semantics on the nav list — current demo uses <span style={CD}>div</span> which is functional but not semantically ideal.</> },
-                    ].map(({ ic, t }, i, a) => <Row key={i} ic={ic} last={i===a.length-1}>{t}</Row>)}
-
-                    {/* Keyboard */}
-                    <p style={{...GH, marginTop:20}}>Keyboard Interaction</p>
-                    {[
-                      { ic:<CHK/>, t:<><span style={KBD}>Tab</span> moves focus through all interactive items in DOM order (nav items then collapse button).</> },
-                      { ic:<CHK/>, t:<><span style={KBD}>Enter</span> / <span style={KBD}>Space</span> activates a destination or toggles a grouper — both handled via <span style={CD}>onKeyDown</span>.</> },
-                      { ic:<REQ/>, t:<><span style={KBD}>↑</span> / <span style={KBD}>↓</span> arrow-key navigation between sibling items (WCAG 2.1 §2.1.1 navigation pattern).</> },
-                      { ic:<REQ/>, t:<><span style={KBD}>Esc</span> — close an expanded grouper and return focus to its parent item.</> },
-                      { ic:<REQ/>, t:<>Visible <span style={CD}>:focus-visible</span> ring on every interactive element — e.g. <span style={CD}>outline: 2px solid #3555a0; outline-offset: 2px</span>. Current demo suppresses browser defaults.</> },
-                    ].map(({ ic, t }, i, a) => <Row key={i} ic={ic} last={i===a.length-1}>{t}</Row>)}
-
-                    {/* Colour Contrast */}
-                    <p style={{...GH, marginTop:20}}>Colour Contrast — WCAG 2.1 AA</p>
-                    {[
-                      { ic:<CHK/>, t:<>Base label <span style={CD}>#4b4b4b</span> on <span style={CD}>#fafafa</span> — ~6.2:1, passes AA normal text.</> },
-                      { ic:<CHK/>, t:<>Active label <span style={CD}>#02060d</span> on <span style={CD}>rgba(53,85,160,0.08)</span> — ~14.5:1, passes AAA.</> },
-                      { ic:<CHK/>, t:<>Hover label <span style={CD}>#363636</span> on <span style={CD}>rgba(17,17,17,0.04)</span> — ~8.5:1, passes AA.</> },
-                      { ic:<WRN/>, t:<>indicator.stripe <span style={CD}>#3555a0</span> at 4px width is purely decorative — state is not conveyed by colour alone. Confirm with Figma team.</> },
-                      { ic:<REQ/>, t:<>Re-verify all ratios once primitive token names are confirmed — <span style={CD}>get_variable_defs</span> resolves to hex only, not intermediate primitive steps.</> },
-                    ].map(({ ic, t }, i, a) => <Row key={i} ic={ic} last={i===a.length-1}>{t}</Row>)}
-
-                    {/* Screen Reader */}
-                    <p style={{...GH, marginTop:20}}>Screen Reader Announcements</p>
-                    {[
-                      { ic:<CHK/>, t:<>Active item: <em style={{color:"#3555a0",fontStyle:"normal",fontWeight:500}}>"Balance Sheet, current page"</em> — from <span style={CD}>aria-current="page"</span>.</> },
-                      { ic:<CHK/>, t:<>Collapsed grouper (active child): <em style={{color:"#3555a0",fontStyle:"normal",fontWeight:500}}>"View, collapsed"</em> — from <span style={CD}>aria-expanded="false"</span>.</> },
-                      { ic:<CHK/>, t:<>Collapse toggle: <em style={{color:"#3555a0",fontStyle:"normal",fontWeight:500}}>"Collapse navigation, button"</em> or <em style={{color:"#3555a0",fontStyle:"normal",fontWeight:500}}>"Expand navigation, button"</em> — from <span style={CD}>aria-label</span>.</> },
-                      { ic:<REQ/>, t:<>Add <span style={CD}>aria-live="polite"</span> region to announce sidebar state changes for users who cannot see the width transition.</> },
-                      { ic:<REQ/>, t:<>Collapsed icon-only items need a visually-hidden label — either <span style={CD}>aria-label</span> on the button or <span style={CD}>{`<span class="sr-only">`}</span> inside the item.</> },
-                      { ic:<WRN/>, t:<>Figma does not yet annotate expected screen reader strings. Recommend adding an Accessibility annotation layer to the SideNav component page specifying VoiceOver/NVDA read-out per state.</> },
-                    ].map(({ ic, t }, i, a) => <Row key={i} ic={ic} last={i===a.length-1}>{t}</Row>)}
-
-                  </div>
-                </section>
               </>
             );
           })()}

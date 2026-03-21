@@ -9,9 +9,8 @@
 The `SideNav` is the primary navigation shell of the Pathway product. It sits on the left edge of the viewport, contains a vertical list of navigation items, and supports two layout states: **expanded** (250px wide, labels visible) and **collapsed** (64px wide, icons only).
 
 ### Figma source
-- **File:** `3sw45aVcngFAmpbP6cfrXP` — Pathway Design System Master File MB 2.0
-- **SideNav component page:** node `40003951:2927`
-- **Real accounting example:** node `40004790:47259`
+- **File:** [Pathway Design System Master File MB 2.0](https://www.figma.com/design/3sw45aVcngFAmpbP6cfrXP/)
+- **SideNav component:** [Open in Figma](https://www.figma.com/design/3sw45aVcngFAmpbP6cfrXP/?node-id=40003951-2927)
 
 ---
 
@@ -337,8 +336,22 @@ When `isSidebarCollapsed = true`:
 
 > **Legend used in this section:**
 > - ✅ **Implemented** — present in the current reference demo (`SideNav.html`)
-> - 📋 **Required by WCAG / ARIA** — standard spec for this pattern, not yet fully verified in Figma annotations or the demo
-> - ❓ **Unconfirmed** — not yet validated; Figma does not supply an accessibility annotation for this
+> - 📋 **Required for production** — standard spec for this pattern, not yet in the demo
+> - ❓ **Unconfirmed** — not yet validated; Figma does not supply an annotation for this
+
+---
+
+### 13.0 ARIA Pattern
+
+The SideNav uses the **ARIA Tree View pattern** (`role="tree"`). The component has two levels of hierarchy — expandable Level 0 groupers with Level 1 child destinations — which maps directly to the [WAI-ARIA treeview specification](https://www.w3.org/WAI/ARIA/apg/patterns/treeview/).
+
+The entire nav is a single Tab stop. Arrow keys navigate within it (see §13.3). This is the correct pattern for a hierarchical, expandable navigation structure of this kind.
+
+Do not use `role="menu"` / `role="menuitem"` — that is for application context-menus, not site navigation, and screen readers will announce it incorrectly.
+
+> **Note on the reference demo (`SideNav.html`):** The demo currently uses `<nav>` with `role="button"` divs as a visual scaffolding baseline. This is not a production-ready implementation. Production code requires native `<button>` / `<a>` elements, roving-tabindex focus management, and the full arrow key handlers documented in §13.3.
+
+---
 
 ### 13.1 Touch & Pointer Targets
 
@@ -349,33 +362,76 @@ When `isSidebarCollapsed = true`:
 
 Both values come from named Figma tokens. `min-height: 48px` on every `SideNavItem` satisfies WCAG 2.5.5 Target Size.
 
-### 13.2 HTML Semantics
+---
 
-| Element | Recommendation | Status |
-|---|---|---|
-| Outer nav container | `<nav aria-label="Main navigation">` | ✅ Implemented |
-| Level 0 and Level 1 interactive items | `role="button"` + `tabIndex="0"` (or native `<button>`) | ✅ Implemented |
-| Grouper items | `aria-expanded="true|false"` | ✅ Implemented |
-| Active destination | `aria-current="page"` | ✅ Implemented |
-| Children list (expanded grouper) | `role="group"` or `role="list"` wrapping Level 1 items | ❓ Not in demo — Figma does not annotate this |
-| Collapse/expand button | `aria-label="Collapse navigation"` / `"Expand navigation"` | 📋 Recommended — Figma does not annotate |
+### 13.2 ARIA Markup
 
-> **Note on `<button>` vs `role="button"`:** Using a native `<button>` element is preferred over `role="button"` because it inherits keyboard behaviour and focus styling for free. The current demo uses `<div role="button" tabIndex={0}>` which requires explicit keyboard handlers and focus styles. A production implementation should use `<button>` with `type="button"`.
+```html
+<nav aria-label="Main navigation">
+
+  <ul role="tree" aria-label="Main navigation">
+
+    <!-- Level 0 — Destination (no children) -->
+    <li role="treeitem" tabindex="-1" aria-current="page">
+      <!-- aria-current="page" on the active item only -->
+      Reports
+    </li>
+
+    <!-- Level 0 — Grouper (has children) -->
+    <li role="treeitem" tabindex="-1" aria-expanded="true">
+      Applications
+      <ul role="group">
+        <li role="treeitem" tabindex="-1">Child Item A</li>
+        <li role="treeitem" tabindex="-1">Child Item B</li>
+      </ul>
+    </li>
+
+    <!-- Level 0 — Grouper (collapsed) -->
+    <li role="treeitem" tabindex="-1" aria-expanded="false">
+      Modify
+      <!-- ul[role="group"] not rendered (or aria-hidden="true") when collapsed -->
+    </li>
+
+  </ul>
+
+</nav>
+
+<!-- Collapse/Expand control — outside the tree, separate button -->
+<button type="button" aria-label="Collapse navigation">
+  <!-- collapse_nav icon -->
+</button>
+```
+
+**Key rules:**
+- The `<ul role="tree">` contains the first level of items only. Children sit inside `<ul role="group">` nested within their parent `<li role="treeitem">`.
+- Only **one** `treeitem` should have `tabindex="0"` at a time (the currently focused item). All others use `tabindex="-1"`. This is roving-tabindex focus management.
+- `aria-expanded` is only valid on grouper treeitems — omit it entirely from leaf (destination) items.
+- `aria-current="page"` goes on the active destination `treeitem` only.
+- The Collapse/Expand button sits **outside** the tree — it is a separate `<button>`, not a `treeitem`.
+
+---
 
 ### 13.3 Keyboard Interaction
 
-The following patterns are standard for navigation menus (ARIA authoring practices):
+The entire nav is a single Tab stop. Arrow keys navigate within it.
 
 | Key | Behaviour | Status |
 |---|---|---|
-| `Tab` | Move focus forward through interactive items | ✅ Works (browser default via `tabIndex=0`) |
-| `Shift+Tab` | Move focus backward | ✅ Works (browser default) |
-| `Enter` | Activate focused item (navigate or toggle grouper) | ✅ Implemented |
-| `Space` | Same as Enter for `role="button"` items | 📋 Not in demo — should be added |
-| `Escape` | Close expanded grouper if one is open | 📋 Not in demo — recommended |
-| Arrow keys (`↑` / `↓`) | Move between items within the nav | 📋 Not in demo — required for `role="menu"` pattern; optional for `role="navigation"` |
+| `Tab` | Moves focus **into** the tree (to the roving focus item) — or **out** of the tree to the next focusable element on the page | 📋 Requires roving-tabindex implementation |
+| `Shift+Tab` | Moves focus out of the tree backward | 📋 Requires roving-tabindex implementation |
+| `↓` (Down Arrow) | Moves focus to the **next visible treeitem** (skips hidden children of collapsed groupers) | 📋 Not in demo |
+| `↑` (Up Arrow) | Moves focus to the **previous visible treeitem** | 📋 Not in demo |
+| `→` (Right Arrow) | On a **collapsed grouper**: expands it. On an **expanded grouper**: moves focus to its first child. On a leaf item: no action. | 📋 Not in demo |
+| `←` (Left Arrow) | On an **expanded grouper**: collapses it. On a **child item (Level 1)**: moves focus to its parent grouper. On a Level 0 leaf: no action. | 📋 Not in demo |
+| `Enter` | Activates the focused item: navigates (destination) or toggles expand/collapse (grouper) | ✅ Implemented (via click handler) |
+| `Space` | Same as Enter for treeitems | 📋 Not in demo |
+| `Home` | Moves focus to the first treeitem in the tree | 📋 Not in demo — recommended |
+| `End` | Moves focus to the last visible treeitem in the tree | 📋 Not in demo — recommended |
+| `Escape` | If a grouper is focused and expanded, collapse it | 📋 Not in demo — recommended |
 
-> **Which ARIA pattern applies?** The SideNav uses `<nav>` (landmark), not `role="menu"`. The `role="menu"` / `role="menuitem"` pattern requires arrow key navigation. The `<nav>` + `role="button"` pattern (used here) only requires `Tab` and `Enter`, which are already implemented. If the team wants to adopt the menu pattern, arrow key support becomes mandatory. This decision should be made explicitly and documented in Figma.
+> **Focus management — roving tabindex:** Only the currently focused item has `tabindex="0"`. When focus moves to a new item (via arrow key), set the old item to `tabindex="-1"` and the new item to `tabindex="0"`. This ensures Tab always lands on the last-focused item when the user returns to the tree.
+
+---
 
 ### 13.4 Focus Styles
 
@@ -383,44 +439,73 @@ The following patterns are standard for navigation menus (ARIA authoring practic
 |---|---|
 | Visible focus ring on all interactive items | ❓ Not styled in demo — browser default outline only |
 | Focus ring must not be suppressed (`outline: none` without replacement) | 📋 Required — WCAG 2.4.11 |
-| Focus ring color should meet 3:1 contrast against adjacent colours | 📋 Suggested color: `Icon/Contextual/NavItem/Active` (#3555a0) — ❓ contrast not verified |
+| Focus ring should use `:focus-visible` (not `:focus`) to avoid painting on mouse click | 📋 Recommended |
+| Suggested focus style | `outline: 2px solid #3555a0; outline-offset: 2px;` (uses `Icon/Contextual/NavItem/Active`) |
 
-> Figma does not contain a "focused" variant in the `SideNavItem` component variants as observed via MCP. This is a documentation gap (see §15). Until a Figma focus spec exists, use the browser default outline or apply a `2px solid #3555a0` outline with `outline-offset: 2px` on `:focus-visible`.
+> Figma does not contain a "focused" state variant in the `SideNavItem` component variants. This is a documentation gap — a focused state should be added to the component before production. See §15.
 
-### 13.5 Screen Reader Experience
+---
+
+### 13.5 Screen Reader Announcements
 
 | Concern | Recommendation | Status |
 |---|---|---|
-| Grouper label includes state | `aria-expanded` communicates open/close — ensure SR announces it | ✅ `aria-expanded` present |
-| Active page communicated | `aria-current="page"` on the active item | ✅ Implemented |
-| Icon-only collapsed sidebar | When collapsed (64px), items have no visible label — tooltips or `aria-label` on items needed | 📋 Not implemented — should add `title` or a tooltip |
-| Grouper children visibility | When grouper is collapsed, children should be `aria-hidden="true"` or removed from DOM | 📋 Demo removes from DOM (conditional render) — correct approach |
-| Collapse/Expand button | Should announce its action: `aria-label="Collapse navigation"` / `"Expand navigation"` | 📋 Not in demo |
+| Tree label | `<ul role="tree" aria-label="Main navigation">` — ensures the landmark is named and SR announces "tree" on entry | 📋 Required |
+| Grouper state | `aria-expanded="true/false"` on grouper treeitems only — SR announces "expanded" or "collapsed". Do not put `aria-expanded` on leaf destination items. | 📋 Required |
+| Active page | `aria-current="page"` on the active destination — SR announces "current page" | ✅ Implemented in demo |
+| Icon-only collapsed sidebar | When collapsed to 64px, labels are hidden visually. Each item needs a text alternative: `aria-label` on the item or a visually-hidden `<span>`. Do not rely on the icon alone. | 📋 Not in demo |
+| Collapsed grouper children | When a grouper is collapsed, its children must be removed from DOM or `aria-hidden="true"` — not just visually hidden with CSS | 📋 Demo uses conditional render — correct approach |
+| Collapse/Expand button | `aria-label="Collapse navigation"` when expanded, `aria-label="Expand navigation"` when collapsed. Update dynamically as state changes. | 📋 Not in demo |
+| Depth announcement | Screen readers announce depth automatically from the markup nesting — do not add manual "level 1 / level 2" text | ✅ Handled by correct markup |
+
+#### Expected screen reader output (VoiceOver / NVDA)
+
+These are approximate strings. Exact wording varies by screen reader and browser.
+
+| Scenario | Expected announcement |
+|---|---|
+| Tab into the nav | *"Main navigation, tree"* |
+| Focus on a leaf destination item (resting) | *"Reports, treeitem, 3 of 7"* |
+| Focus on the active destination | *"Enter, current page, treeitem, 2 of 7"* |
+| Focus on a collapsed grouper | *"Applications, collapsed, treeitem, 1 of 7"* |
+| Focus on an expanded grouper | *"Applications, expanded, treeitem, 1 of 7"* |
+| Focus on a Level 1 child | *"Enter Journal, treeitem, 1 of 3, level 2"* |
+| Pressing → on a collapsed grouper | *"Applications, expanded"* (state change announced) |
+| Pressing ← on an expanded grouper | *"Applications, collapsed"* |
+| Focus on Collapse button | *"Collapse navigation, button"* |
+| Sidebar collapsed, focus on icon-only item | *"Reports, treeitem"* — only if `aria-label` is set; without it: *"treeitem"* (no label — broken) |
+
+
+---
 
 ### 13.6 Colour Contrast
 
-All colour decisions below use token resolved values. Contrast ratios are approximate and should be verified with a tool (e.g. Colour Contrast Analyser).
+All values below use token resolved values. Verify with a tool (e.g. Colour Contrast Analyser).
 
-| State | Text | Background | Approximate ratio | WCAG AA (4.5:1) |
+| State | Text token → hex | Background | Approx. ratio | WCAG AA (4.5:1) |
 |---|---|---|---|---|
-| Base | `#4b4b4b` on `#fafafa` | Text on surface | ~6.3:1 | ✅ Pass |
-| Hover | `#363636` on `rgba(17,17,17,0.04)` ≈ `#f5f5f5` | ~9.3:1 | ✅ Pass |
-| Active | `#02060d` on `rgba(53,85,160,0.08)` ≈ `#eef1f8` | ~19:1 | ✅ Pass |
-| Trail (expanded) | `#02060d` on `rgba(17,17,17,0.04)` ≈ `#f5f5f5` | ~19:1 | ✅ Pass |
-| indicator.stripe | `#3555a0` on `#fafafa` | 3px stripe non-text | ✅ 3:1 for non-text (WCAG 1.4.11) |
+| Base | `Text/NavItem/Base` → `#4b4b4b` on `#fafafa` | ~6.3:1 | ✅ Pass |
+| Hover | `Text/NavItem/Hover` → `#363636` on `≈#f5f5f5` | ~9.3:1 | ✅ Pass |
+| Active | `Text/NavItem/Active` → `#02060d` on `≈#eef1f8` | ~19:1 | ✅ Pass |
+| Trail (expanded) | `Text/NavItem/Active` → `#02060d` on `≈#f5f5f5` | ~19:1 | ✅ Pass |
+| `indicator.stripe` | `Icon/NavItem/Active` → `#3555a0` on `#fafafa` | Non-text UI component | ✅ 3:1 (WCAG 1.4.11) |
+| Focus ring (proposed) | `#3555a0` outline on `#fafafa` | Non-text UI component | ✅ 3:1 — verify with tool |
 
-> ⚠ These ratios are approximations. The alpha-based fill tokens (`rgba(...)`) mean the actual contrast depends on what's behind the item. On the `#fafafa` nav surface the calculations above hold. On other backgrounds they may differ.
+> ⚠ Contrast ratios are approximated on the `#fafafa` nav surface. Alpha-blended fills (`rgba(...)`) will vary on other backgrounds.
+
+---
 
 ### 13.7 Figma Accessibility Gaps
 
-The following accessibility specifications are **absent from the Figma component** as observed via MCP:
-- No "focused" state variant in `SideNavItem` component
-- No focus ring colour or style annotation
-- No `aria-label` annotation on the Collapse/Expand button
-- No keyboard interaction annotation in component notes
-- No tooltip/label specification for collapsed (icon-only) sidebar items
+The ARIA pattern, keyboard tables, screen reader strings, and contrast ratios all live in this spec (single source of truth). Figma does not need to duplicate that content — it should link to this document instead.
 
-These should be added to the Figma component as design-time annotations before a production implementation is finalised.
+The only things that genuinely need to be **done in Figma** (because they are design artifacts, not documentation):
+
+| Gap | Priority | Action needed in Figma |
+|---|---|---|
+| No "focused" state variant in `SideNavItem` | HIGH | Design and add a focused variant to the component — suggested style: `2px solid #3555a0` outline, `2px` offset. This is a visual design decision that must exist in Figma. |
+| No link to this spec in Dev Mode | HIGH | In Figma Dev Mode → Resources panel, add the spec URL: `https://helloimjolopez-collab.github.io/pathwaytokens/SideNav-spec.md`. Takes 30 seconds and means devs always have one click to the full reference. |
+| Accessibility section in Figma doc frame is outdated | MEDIUM | Replace with a short plain-text summary (component description, key decisions, any gaps that require design work) and a link to this spec. Do not duplicate tables. |
 
 ---
 
