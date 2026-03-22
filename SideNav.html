@@ -15,6 +15,32 @@
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 4px; }
+
+  /* PopoverMenu animation — slides in 4px from left + fades in                    */
+  /* Duration: 150ms ease-out on open. Close relies on 300ms hover-leave delay.    */
+  /* prefers-reduced-motion: motion removed, opacity-only fade retained.           */
+  /* popoverIn — for popovers that are top-aligned (no vertical centering transform) */
+  @keyframes popoverIn {
+    from { opacity: 0; transform: translateX(-4px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  /* popoverInCentered — for tooltips using translateY(-50%) vertical centering.     */
+  /* Must bake the Y transform into both keyframes or the animation final state      */
+  /* (forwards fill) overwrites the inline translateY(-50%) and breaks alignment.   */
+  @keyframes popoverInCentered {
+    from { opacity: 0; transform: translateX(-4px) translateY(-50%); }
+    to   { opacity: 1; transform: translateX(0)    translateY(-50%); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    @keyframes popoverIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    @keyframes popoverInCentered {
+      from { opacity: 0; transform: translateY(-50%); }
+      to   { opacity: 1; transform: translateY(-50%); }
+    }
+  }
 </style>
 </head>
 <body>
@@ -61,7 +87,7 @@ const L = {
   navPadH:     12,   // SideNav.Container px-[12px]
   navPadV:     14,   // SideNav.Container py-[14px]
   navW:        250,  // SideNav expanded width (no token)
-  navWcol:     64,   // SideNav collapsed width (no token)
+  navWcol:     72,   // SideNav collapsed width — Figma: 72px (12px padding × 2 + 48px item)
   menuGap:     8,    // SideNavMenu gap-[8px] between items
   menuPadB:    24,   // SideNavMenu pb-[24px]
   itemH:       48,   // Accessibility/Touch Target/Optimal/Size → 48px ✓ HAS TOKEN
@@ -231,7 +257,7 @@ function IndicatorStripe({ visible }) {
 // Level 0: [indicator 4px][LeadingIcon 24px][label flex][RowEnd 40×24 — groupers]
 // Level 1: [indicator 4px][label flex pl-32]  (no icon, pl = rowStart 8 + main 24)
 function SideNavItem({ item, isActive, isTrail, isExpanded, isSidebarCollapsed,
-  isChild, onClick, onToggle, popoverOpen, onPopoverEnter, onPopoverLeave }) {
+  isChild, onClick, onToggle, popoverOpen, anchorRect, onPopoverEnter, onPopoverLeave }) {
 
   const [hovered, setHovered] = useState(false);
   const hasChildren = !!(item.children && item.children.length);
@@ -262,24 +288,32 @@ function SideNavItem({ item, isActive, isTrail, isExpanded, isSidebarCollapsed,
     :                                        T.icon.navBase;
 
   const handleClick = () => {
+    // Expanded sidebar: groupers toggle their children, destinations navigate.
+    // Collapsed sidebar: groupers act as navigation targets — tapping a grouper
+    // sets it Active (Figma: "When tapping on a grouper, the grouper moves to
+    // its active state"). Popover remains hover-triggered separately.
     if (hasChildren && !isSidebarCollapsed) onToggle(item.id);
-    else if (!hasChildren) onClick(item.id);
+    else onClick(item.id);
   };
 
   const ChevComp = isExpanded ? IC.chevUp : IC.chevDown;
+  const itemRef = useRef(null);
 
   return (
-    <div style={{ position:"relative" }}>
+    <div ref={itemRef} style={{ position:"relative" }}>
       <div role="button" tabIndex={0} aria-current={isActive ? "page" : undefined}
         aria-expanded={hasChildren && !isSidebarCollapsed ? isExpanded : undefined}
         onClick={handleClick} onKeyDown={e => (e.key==="Enter"||e.key===" ") && handleClick()}
         onMouseEnter={() => {
           setHovered(true);
-          if (isSidebarCollapsed && hasChildren && onPopoverEnter) onPopoverEnter(item.id);
+          if (isSidebarCollapsed && onPopoverEnter) {
+            const rect = itemRef.current ? itemRef.current.getBoundingClientRect() : null;
+            onPopoverEnter(item.id, rect);
+          }
         }}
         onMouseLeave={() => {
           setHovered(false);
-          if (isSidebarCollapsed && hasChildren && onPopoverLeave) onPopoverLeave();
+          if (isSidebarCollapsed && onPopoverLeave) onPopoverLeave();
         }}
         style={{ display:"flex", alignItems:"center", minHeight:L.itemH, width:"100%",
           borderRadius:T.radius, backgroundColor:fillBg, cursor:"pointer",
@@ -289,11 +323,14 @@ function SideNavItem({ item, isActive, isTrail, isExpanded, isSidebarCollapsed,
         {/* container.indicator — 4px structural column, always present */}
         <IndicatorStripe visible={showStripe} />
 
-        {/* Container.LeadingIcon 24×24 → Icon.Leading 14pt — Level 0 ONLY */}
+        {/* Container.LeadingIcon 24×24 → Icon.Leading 14pt — Level 0 ONLY          */}
+        {/* Collapsed: item is 48px wide (72px container − 12px padding × 2).        */}
+        {/* 4px stripe + 8px rowStart padding + 24px icon + 8px rowStart = 44px      */}
+        {/* icon naturally centers within the 48px item — no margin hack needed.     */}
         {!isChild && item.icon && (
           <div style={{ width:L.iconWrap, height:L.iconWrap, display:"flex",
             alignItems:"center", justifyContent:"center", flexShrink:0,
-            marginLeft: isSidebarCollapsed ? 7 : 4 }}>
+            marginLeft: L.rowPadH }}>
             <IconImg name={item.icon} size={L.iconInner} color={iconColor} />
           </div>
         )}
@@ -323,27 +360,118 @@ function SideNavItem({ item, isActive, isTrail, isExpanded, isSidebarCollapsed,
         )}
       </div>
 
-      {/* Collapsed sidebar flyout popover */}
-      {isSidebarCollapsed && hasChildren && popoverOpen && (
-        <CollapsedPopover item={item} onClick={onClick}
-          onMouseEnter={() => onPopoverEnter && onPopoverEnter(item.id)}
+      {/* ── Hover-safe bridge ─────────────────────────────────────────────────── */}
+      {/* position:fixed so it escapes the nav's overflow:hidden clipping.         */}
+      {/* Covers the 8px gap between nav right edge and the portal-rendered popover */}
+      {isSidebarCollapsed && popoverOpen && anchorRect && (
+        <div style={{ position:"fixed",
+          left: anchorRect.right, top: anchorRect.top,
+          width:8, height: anchorRect.height, zIndex:999 }}
+          onMouseEnter={() => {
+            const rect = itemRef.current ? itemRef.current.getBoundingClientRect() : anchorRect;
+            onPopoverEnter && onPopoverEnter(item.id, rect);
+          }} />
+      )}
+
+      {/* Collapsed grouper → flyout popover with section label + children */}
+      {/* Rendered via portal so it escapes the nav's overflow:hidden stacking context */}
+      {isSidebarCollapsed && hasChildren && popoverOpen && anchorRect && (
+        <CollapsedPopover item={item} onClick={onClick} anchorRect={anchorRect}
+          onMouseEnter={() => {
+            const rect = itemRef.current ? itemRef.current.getBoundingClientRect() : anchorRect;
+            onPopoverEnter && onPopoverEnter(item.id, rect);
+          }}
+          onMouseLeave={onPopoverLeave} />
+      )}
+
+      {/* Collapsed destination → simple label tooltip */}
+      {/* Rendered via portal so it escapes the nav's overflow:hidden stacking context */}
+      {isSidebarCollapsed && !hasChildren && popoverOpen && anchorRect && (
+        <CollapsedTooltip label={item.label} anchorRect={anchorRect}
+          onMouseEnter={() => {
+            const rect = itemRef.current ? itemRef.current.getBoundingClientRect() : anchorRect;
+            onPopoverEnter && onPopoverEnter(item.id, rect);
+          }}
           onMouseLeave={onPopoverLeave} />
       )}
     </div>
   );
 }
 
-function CollapsedPopover({ item, onClick, onMouseEnter, onMouseLeave }) {
-  return (
+// ── CollapsedTooltip ─────────────────────────────────────────────────────────
+// Shown on hover of a collapsed destination item (non-grouper).
+// Tokens: Fill/Static/Neutral/White, Stroke/Static/Neutral/Light (#f6f6f6),
+//         Text/Static/Primary/Base (#252525), Text/Body/S/Regular (14px/400/20px)
+// Shadow: 2px 2px 8px 0px rgba(0,0,0,0.03)
+// Offset: left edge at container right edge + 8px gap (bridge element covers gap)
+function CollapsedTooltip({ label, anchorRect, onMouseEnter, onMouseLeave }) {
+  if (!anchorRect) return null;
+  const top = anchorRect.top + anchorRect.height / 2;
+  const left = anchorRect.right + 8;
+  return ReactDOM.createPortal(
     <div onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}
-      style={{ position:"absolute", left:"calc(100% + 8px)", top:0, zIndex:200,
-        backgroundColor:"#fff", borderRadius:10,
-        boxShadow:"0 4px 20px rgba(0,0,0,0.12)", padding:4, minWidth:188 }}>
-      <p style={{ fontFamily:"'Red Hat Text',sans-serif", fontWeight:600, fontSize:11,
-        color:"#9a9a9a", textTransform:"uppercase", letterSpacing:"0.08em",
-        padding:"8px 12px 4px", margin:0 }}>{item.label}</p>
+      style={{ position:"fixed", left, top,
+        zIndex:1000,
+        backgroundColor:"#fff",
+        border:"0.5px solid #f6f6f6",
+        borderRadius:8,
+        boxShadow:"2px 2px 8px 0px rgba(0,0,0,0.03)",
+        padding:"6px 8px",
+        whiteSpace:"nowrap",
+        pointerEvents:"auto",
+        /* popoverInCentered bakes translateY(-50%) into both keyframes so the     */
+        /* forwards fill never clobbers the vertical centering transform.          */
+        animation:"popoverInCentered 150ms cubic-bezier(0,0,0.2,1) forwards" }}>
+      <span style={{ fontFamily:"'Red Hat Text',sans-serif", fontWeight:400,
+        fontSize:14, lineHeight:"20px", letterSpacing:"0.02px",
+        color:"#252525" }}>
+        {label}
+      </span>
+    </div>,
+    document.body
+  );
+}
+
+// ── CollapsedPopover ─────────────────────────────────────────────────────────
+// Shown on hover of a collapsed grouper item. Contains a SectionLabel (group
+// name) + list of child items.
+// Tokens: Fill/Static/Surface/White, Stroke/Static/Neutral/Subtle (#ededed) 0.5px,
+//         Border/Radius/S (8px), Shadow.Medium (2px 2px 8px 4px rgba(0,0,0,0.03))
+// Section label: Label/Menu/Base/Regular (14px/400/20px), #6b6b6b, bottom border
+// Items: Text/Body/S/Regular (14px/400/20px), Text/Contextual/NavItem/Base (#4b4b4b)
+// Offset: 8px from container right edge (bridge covers gap — see above)
+function CollapsedPopover({ item, onClick, anchorRect, onMouseEnter, onMouseLeave }) {
+  if (!anchorRect) return null;
+  const top = anchorRect.top;
+  const left = anchorRect.right + 8;
+  return ReactDOM.createPortal(
+    <div onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}
+      style={{ position:"fixed", left, top, zIndex:1000,
+        backgroundColor:"#fff",
+        border:"0.5px solid #ededed",
+        borderRadius:8,
+        boxShadow:"2px 2px 8px 4px rgba(0,0,0,0.03)",
+        padding:6,
+        minWidth:200,
+        pointerEvents:"auto",
+        animation:"popoverIn 150ms cubic-bezier(0,0,0.2,1) forwards" }}>
+
+      {/* PopoverMenu.SectionLabel — group name with 4px left indicator slot + bottom divider */}
+      <div style={{ display:"flex", alignItems:"center", minHeight:40,
+        paddingRight:12, borderBottom:"0.5px solid #ededed", marginBottom:0 }}>
+        <div style={{ width:4, alignSelf:"stretch", borderRadius:"0 8px 8px 0",
+          backgroundColor:"transparent", flexShrink:0 }} />
+        <span style={{ paddingLeft:8, fontFamily:"'Red Hat Text',sans-serif",
+          fontWeight:400, fontSize:14, lineHeight:"20px", letterSpacing:"0.02px",
+          color:"#6b6b6b", whiteSpace:"nowrap" }}>
+          {item.label}
+        </span>
+      </div>
+
+      {/* PopoverMenu.Items */}
       {item.children.map(child => <PopoverRow key={child.id} item={child} onClick={onClick} />)}
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -352,11 +480,12 @@ function PopoverRow({ item, onClick }) {
   return (
     <div onClick={() => onClick(item.id)}
       onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
-      style={{ display:"flex", alignItems:"center", padding:"10px 12px", borderRadius:6,
+      style={{ display:"flex", alignItems:"center",
+        minHeight:40, padding:"4px 12px", borderRadius:8,
         backgroundColor: h ? T.fill.navHover : "transparent",
         cursor:"pointer", transition:"background-color 0.15s ease" }}>
-      <span style={{ fontFamily:"'Red Hat Text',sans-serif", fontWeight:500,
-        fontSize:16, lineHeight:"22px",
+      <span style={{ fontFamily:"'Red Hat Text',sans-serif", fontWeight:400,
+        fontSize:14, lineHeight:"20px", letterSpacing:"0.02px",
         color: h ? T.text.navHover : T.text.navBase, transition:"color 0.15s ease" }}>
         {item.label}
       </span>
@@ -404,11 +533,13 @@ function CollapseButton({ isSidebarCollapsed, onToggle }) {
 // ─── SIDENAV CONTAINER ────────────────────────────────────────────────────────
 // Surface/Nav/Light (#fafafa), border-r Fill/Static/Info/Subtle (#edf0f9)
 // Padding: px-[12px] py-[14px] (no semantic tokens — Figma gap)
-// Width: 250px expanded, 64px collapsed (no semantic tokens — Figma gap)
+// Width: 250px expanded, 72px collapsed — Figma: 72px (12px padding × 2 + 48px item)
+// Border-right: 0.5px (--border-width/xs) solid Fill/Static/Info/Subtle (#edf0f9)
 function SideNav({ activeId, onNavigate }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [expanded, setExpanded] = useState({ view: true });
   const [popoverId, setPopoverId] = useState(null);
+  const [popoverRect, setPopoverRect] = useState(null);
   const timerRef = useRef(null);
 
   const trailParentId = (() => {
@@ -417,8 +548,15 @@ function SideNav({ activeId, onNavigate }) {
   })();
 
   const toggleExpand = id => setExpanded(p => ({ ...p, [id]: !p[id] }));
-  const onPopoverEnter = id => { clearTimeout(timerRef.current); setPopoverId(id); };
-  const onPopoverLeave = () => { timerRef.current = setTimeout(() => setPopoverId(null), 120); };
+  const onPopoverEnter = (id, rect) => {
+    clearTimeout(timerRef.current);
+    setPopoverId(id);
+    if (rect) setPopoverRect(rect);
+  };
+  // 300ms close delay — generous enough for motor-impaired users (WCAG 2.5.1).
+  // Combined with the invisible bridge element on each item, users can move
+  // freely from nav item to popover without triggering a close.
+  const onPopoverLeave = () => { timerRef.current = setTimeout(() => { setPopoverId(null); setPopoverRect(null); }, 300); };
 
   return (
     <nav style={{
@@ -433,8 +571,9 @@ function SideNav({ activeId, onNavigate }) {
       boxSizing:"border-box", flexShrink:0,
       transition:"width 0.25s cubic-bezier(0.4,0,0.2,1)",
       // stroke/static/info/subtle = Fill/Static/Info/Subtle
-      borderRight:`1px solid ${T.fill.infoSubtle}`,
-      overflowY:"auto", overflowX:"hidden",
+      // Border-width/xs token = 0.5px (Figma: --border-width/xs)
+      borderRight:`0.5px solid ${T.fill.infoSubtle}`,
+      overflowY:"auto",
     }}>
       {/* SideNavMenu: gap-[8px] between items, pb-[24px] */}
       <div style={{ display:"flex", flexDirection:"column", flex:1, gap:L.menuGap }}>
@@ -449,6 +588,7 @@ function SideNav({ activeId, onNavigate }) {
                 isExpanded={isExpanded} isSidebarCollapsed={sidebarCollapsed}
                 isChild={false} onClick={onNavigate} onToggle={toggleExpand}
                 popoverOpen={popoverId === item.id}
+                anchorRect={popoverId === item.id ? popoverRect : null}
                 onPopoverEnter={onPopoverEnter} onPopoverLeave={onPopoverLeave} />
 
               {/* Level 1 children — visible only when grouper expanded + sidebar expanded */}

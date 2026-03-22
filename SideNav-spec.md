@@ -12,11 +12,38 @@ It is **not** global app navigation or top-level product navigation. Each module
 
 It supports two levels of depth: Level 0 (parent) and Level 1 (child). Level 1 items are always leaf destinations — they never group or expand further. This is a hard constraint enforced at the data layer, not just a design convention.
 
-The component supports two layout states: **expanded** (250px wide, icons and labels visible) and **collapsed** (64px wide, icons only).
+The component supports two layout states: **expanded** (250px wide, icons and labels visible) and **collapsed** (72px wide, icons only).
 
 ### Figma source
 - **File:** [Pathway Design System Master File MB 2.0](https://www.figma.com/design/3sw45aVcngFAmpbP6cfrXP/)
 - **SideNav component:** [Open in Figma](https://www.figma.com/design/3sw45aVcngFAmpbP6cfrXP/?node-id=40003951-2927)
+
+---
+
+## 1.1 Governance — where things live
+
+Use this table when you need to find or change something. Every row points to the single location that owns that decision.
+
+| To change… | Owner | Where |
+|---|---|---|
+| SideNav item colours, typography, spacing tokens | Figma — SideNav component | [Open in Figma](https://www.figma.com/design/3sw45aVcngFAmpbP6cfrXP/?node-id=40003951-2927) |
+| Primitive or semantic token values (colours, radii, shadows) | Figma — Variables panel | [Open in Figma](https://www.figma.com/design/3sw45aVcngFAmpbP6cfrXP/) |
+| Popover visual design (surface, border, shadow, typography) | Figma — PopoverMenu component | [Open in Figma](https://www.figma.com/design/3sw45aVcngFAmpbP6cfrXP/?node-id=40005913-152988) |
+| Popover animation (duration, easing, reduced-motion) | Figma — PopoverMenu component page | [Open in Figma](https://www.figma.com/design/3sw45aVcngFAmpbP6cfrXP/?node-id=40005913-152988) |
+| Popover positioning relative to SideNav (8px offset, direction) | This spec | §10.5 |
+| Which hover target shows tooltip vs popover | This spec | §10.3 |
+| Hover-safe interaction (bridge, close delay) | This spec | §10.4 |
+| Collapsed state layout (72px width, icon centering, tooltip tokens) | This spec | §10.1–10.2 |
+| Collapsed tooltip visual design | This spec | §10.3 |
+| Expand/Collapse control structure and tokens | This spec | §9 |
+| Sidebar width transition animation | This spec | §8 |
+| Active / hover / trail state colours | This spec | §5–6 |
+| ARIA pattern and keyboard behaviour | This spec | §13 |
+| Screen reader output | This spec | §13.5 |
+| Scroll and overflow behaviour | This spec | §9.1 |
+| Known design gaps and deferred decisions | This spec | §15 |
+
+**Rule:** if a decision isn't in the table above, check §15 (gaps). If it's not there either, it hasn't been specified yet — add it to the spec before implementing.
 
 ---
 
@@ -289,17 +316,141 @@ Icons are fill-style from the design system (`collapse_nav`, `expand_nav`), not 
 
 ---
 
+## 9.1 Overflow and scroll behaviour
+
+The nav container uses `overflow-y: auto`. When the nav item list grows long enough to exceed the viewport height, a scrollbar appears inside the nav container.
+
+### Expanded sidebar
+
+- A vertical scrollbar appears inside the 250px nav container.
+- All nav items remain accessible by scrolling.
+- The **Collapse button scrolls with the content** — it is not sticky. As content grows, the button is pushed below the fold and requires scrolling to reach. This is acknowledged design debt; see §15.8.
+- The scrollbar uses a 4px custom track (`background: rgba(0,0,0,0.12)`) and does not visually intrude on item layout.
+
+### Collapsed sidebar
+
+- Same `overflow-y: auto` behaviour. A scrollbar appears inside the 72px nav container.
+- The scrollbar (4px) overlaps the right edge of the container but does not affect icon centering, as icons are centred within their 48×48px hit area with 12px padding each side.
+- The **Collapse button (expand icon in this state) is again not sticky** and scrolls with content.
+
+### Popovers and tooltips when the sidebar is scrolled
+
+Because `CollapsedTooltip` and `CollapsedPopover` are rendered via portal (`document.body`) using `position: fixed` with coordinates from `getBoundingClientRect()`, their position is always relative to the **viewport**, not the scroll container.
+
+This means:
+
+- If the user opens a popover/tooltip and then scrolls the nav, the overlay does **not** follow the item — it stays at its original screen position until dismissed.
+- In practice this is not an issue: the popover/tooltip is shown on hover and dismissed on mouse leave (300ms delay). A user cannot simultaneously hover an item and scroll the nav without triggering the leave event.
+- If a scroll event causes an item to move out of view, the popover closes via the normal mouse-leave path.
+
+### Figma gap
+
+The overflow/scroll behaviour is not annotated in Figma. The nav container is designed at a fixed height showing all items in frame. The collapse button stickiness question (§15.8) is the primary open design decision in this area.
+
+---
+
 ## 10. Sidebar Collapsed State
 
-When `isSidebarCollapsed = true`:
-- Nav width: 64px
-- All labels hidden
-- `Container.RowEnd` (chevrons) hidden
-- Level 1 children hidden (groupers act like icon-only destinations)
-- Hovering a grouper shows a **flyout popover** with the group label and all children
-- Grouper in trail-collapsed state: `Container.LeadingIcon` icon shows in `Icon/Contextual/NavItem/Active` (`#3555a0`) with active fill and stripe
+### 10.1 Container
 
-> **⚠ Gap:** The `SideNavItem.Collapsed` Figma variants were partially inaccessible during implementation. The exact spacing of collapsed items needs further verification in Figma.
+| Property | Value | Token |
+|---|---|---|
+| Width | 72px | None — raw value |
+| Padding | `12px` horizontal, `14px` vertical | None |
+| Background | `#fafafa` | `Surface/Nav/Light` |
+| Border-right | `0.5px solid #edf0f9` | `--border-width/xs` + `Fill/Static/Info/Subtle` |
+| Item gap | `8px` | None |
+
+The 72px breaks down as: 12px left padding + 48px item + 12px right padding. Items are 48×48px squares.
+
+### 10.2 SideNavItem.Collapsed
+
+All state tokens are the same as the expanded item (see §6 State Matrix). Layout differences:
+
+- Labels hidden
+- `Container.RowEnd` (chevrons) hidden
+- Level 1 children hidden
+- Icon container: 24×24px centered within the 48px item via `px-[8px]` + flex `justify-center` — no manual offset needed
+- `indicator.stripe` present on Active and Trail-collapsed states as normal
+
+### 10.3 Hover behaviour — destinations vs groupers
+
+| Item type | On hover |
+|---|---|
+| **Destination** (no children) | Show `CollapsedTooltip` — label only, positioned to the right |
+| **Grouper** (has children) | Show `PopoverMenu` — section label + children list |
+
+Both appear with an **8px gap** from the container's right edge (`left: calc(100% + 8px)`).
+
+#### CollapsedTooltip
+
+| Property | Value | Token |
+|---|---|---|
+| Background | `white` | `Fill/Static/Neutral/White` |
+| Border | `0.5px solid #f6f6f6` | `Stroke/Static/Neutral/Light` |
+| Border radius | `8px` | `Border/Radius/S` |
+| Shadow | `2px 2px 8px 0px rgba(0,0,0,0.03)` | — |
+| Padding | `6px 8px` | — |
+| Typography | 14px / 400 / 20px / 0.02px | `Text/Body/S/Regular` |
+| Text colour | `#252525` | `Text/Static/Primary/Base` |
+| Position | Right of item, vertically centred (`top: 50%; transform: translateY(-50%)`) | — |
+
+#### PopoverMenu (grouper flyout)
+
+| Property | Value | Token |
+|---|---|---|
+| Background | `white` | `Fill/Static/Surface/White` |
+| Border | `0.5px solid #ededed` | `Stroke/Static/Neutral/Subtle` |
+| Border radius | `8px` | `Border/Radius/S` |
+| Shadow | `2px 2px 8px 4px rgba(0,0,0,0.03)` | `Shadow.Medium` |
+| Padding | `6px` | — |
+| Min-width | `200px` | — |
+| Position | `left: calc(100% + 8px)`, `top: 0` on the container | — |
+
+**`PopoverMenu.SectionLabel`** (group name, shown above items):
+
+| Property | Value | Token |
+|---|---|---|
+| Height | `40px min` | — |
+| Bottom border | `0.5px solid #ededed` | `Stroke/Static/Neutral/Subtle` |
+| Left indicator slot | `4px wide` (same structural column as `indicator.stripe`) | — |
+| Text indent | `8px left padding` | — |
+| Typography | 14px / 400 / 20px / 0.02px | `Label/Menu/Base/Regular` |
+| Text colour | `#6b6b6b` | `Text/Static/Secondary/Subtle` |
+
+**`PopoverMenu.Item`** (each child):
+
+| Property | Value | Token |
+|---|---|---|
+| Height | `40px min` | — |
+| Padding | `4px 12px` | — |
+| Border radius | `8px` | `Border/Radius/S` |
+| Typography | 14px / 400 / 20px / 0.02px | `Text/Body/S/Regular` |
+| Text colour (base) | `#4b4b4b` | `Text/Contextual/NavItem/Base` |
+| Text colour (hover) | `#363636` | `Text/Contextual/NavItem/Hover` |
+| Fill (hover) | `rgba(17,17,17,0.04)` | `Fill/Contextual/NavItem/Hover` |
+
+### 10.4 Hover-safe interaction
+
+The popover must not close as the user moves their mouse from the nav item to the popover. Two mechanisms work together:
+
+**Invisible bridge element:** An 8px-wide transparent div sits between the item's right edge and the popover's left edge (`position: absolute; left: 100%; width: 8px; height: 100%`). Mouse movement through this gap triggers `onMouseEnter` on the bridge, keeping the popover open.
+
+**Close delay:** 300ms timer fires after mouse leaves both the item and the popover. This is generous enough for motor-impaired users and satisfies WCAG 2.5.1. The timer resets any time the mouse re-enters the item, bridge, or popover.
+
+### 10.5 Popover animation
+
+The full motion spec (duration, easing, reduced-motion, hover-safe close delay) is owned by the PopoverMenu component and documented on the [PopoverMenu Figma component page](https://www.figma.com/design/3sw45aVcngFAmpbP6cfrXP/%E2%9D%87%EF%B8%8F--Pathway-Design-System--Master-File--MB-2.0-?node-id=40005913-152988&t=C5AHPCaPqyhmnq3s-1).
+
+SideNav-specific positioning: the popover opens **to the right** of the collapsed container, **8px from the container's right edge** (`left: calc(100% + 8px)`), sliding in from the left (`translateX(-4px → 0)`).
+
+### 10.6 Overlay stacking context (implementation note)
+
+The collapsed nav container requires `overflow-y: auto` for scrolling. Any `overflow` value other than `visible` on a positioned element creates a CSS clipping context — absolutely positioned children that extend beyond the container's bounds (i.e. the popover and tooltip, which open to the right) will be clipped regardless of `z-index`.
+
+**Required implementation pattern:** The `CollapsedTooltip` and `CollapsedPopover` must be rendered outside the nav's DOM subtree (e.g. via `ReactDOM.createPortal` into `document.body`) using `position: fixed` with coordinates calculated at open time from `getBoundingClientRect()` on the trigger element. The hover-safe bridge element must also use `position: fixed` for the same reason.
+
+This is a CSS architectural constraint, not a Figma design concern. No Figma annotation is needed.
 
 ---
 
@@ -531,7 +682,7 @@ To implement SideNav from scratch with correct design system alignment, provide:
 The following are gaps in the current Figma documentation that prevent a fully semantic implementation:
 
 ### 15.1 Missing spacing/layout tokens (HIGH priority)
-No named tokens exist for: nav container padding (12px H / 14px V), item gap (8px), stripe width (4px), row padding (8px), child indent (24px), collapse row padding, nav width (250px / 64px), or `Container.RowEnd` dimensions. These are raw Tailwind values. **Recommend creating a spacing scale** and referencing it with semantic names like `Spacing/Nav/ContainerPaddingH`.
+No named tokens exist for: nav container padding (12px H / 14px V), item gap (8px), stripe width (4px), row padding (8px), child indent (24px), collapse row padding, nav widths (250px expanded / 72px collapsed), or `Container.RowEnd` dimensions. These are raw Tailwind values. **Recommend creating a spacing scale** and referencing it with semantic names like `Spacing/Nav/ContainerPaddingH`.
 
 ### 15.2 Primitive token names not surfaced (MEDIUM priority)
 `get_variable_defs` (Figma MCP tool) resolves semantic token alias chains to their final hex value but does not expose intermediate primitive token names. The full chain `Semantic → Primitive → Hex` cannot be reconstructed from MCP alone. This blocks documentation of the full token lineage. **Recommend:** either expose primitives in a dedicated Figma frame/page, or use the Figma REST API (`GET /v1/files/:key/variables`) which does return the full alias chain.
@@ -545,8 +696,20 @@ The page/viewport background is `#fafafa` (same as `Surface/Nav/Light`). The sem
 ### 15.5 indicator.stripe border-radius unconfirmed (LOW priority)
 The stripe uses `border-radius: 0 8px 8px 0` (rounded right only). The `8px` is assumed to match `Border/S` (same as the item radius token) but has not been explicitly confirmed in Figma.
 
-### 15.6 Collapsed sidebar item layout unconfirmed (MEDIUM priority)
-`SideNavItem.Collapsed` variants were partially inaccessible via MCP during implementation. The exact icon centering, spacing, and state behavior of collapsed items needs explicit Figma documentation.
+### 15.6 PopoverMenu animation spec (RESOLVED)
+The motion spec lives on the [PopoverMenu Figma component page](https://www.figma.com/design/3sw45aVcngFAmpbP6cfrXP/%E2%9D%87%EF%B8%8F--Pathway-Design-System--Master-File--MB-2.0-?node-id=40005913-152988&t=C5AHPCaPqyhmnq3s-1). §10.5 references it and documents the SideNav-specific positioning detail.
 
 ### 15.7 Grouper collapsed with no active child — state unconfirmed (LOW priority)
 The state matrix above specifies that a collapsed grouper with **no** active child shows in Base state. This should be explicitly documented in the Figma component annotations to avoid ambiguity.
+
+### 15.8 Collapse/Expand control pattern — design debt (HIGH priority)
+
+Flagged in Figma: [view annotation](https://www.figma.com/design/3sw45aVcngFAmpbP6cfrXP/%E2%9D%87%EF%B8%8F--Pathway-Design-System--Master-File--MB-2.0-?node-id=40004169-1511&t=C5AHPCaPqyhmnq3s-1)
+
+The current collapse/expand control mirrors the existing production behavior: it is presented as a menu item at the bottom of the navigation list. This pattern is not recommended for the following reasons:
+
+- It mixes a **layout control** with **navigation destinations**, violating the single-responsibility principle of the nav list
+- It has **low discoverability** — it is easily overlooked at the bottom of the list
+- It creates **inconsistent expectations for keyboard and screen-reader users** — a structural control appears as a peer item inside the `role="tree"` nav, where users expect only navigation destinations
+
+This behavior is retained for the current release to minimise scope and risk. The collapse/expand control **must be revisited** in a future iteration and redesigned as a proper control (e.g. an Action Icon / button tied to the navigation container header, outside the tree), following established patterns for panel toggle controls.
