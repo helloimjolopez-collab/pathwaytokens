@@ -41,6 +41,9 @@ Use this table when you need to find or change something. Every row points to th
 | ARIA pattern and keyboard behaviour | This spec | §13 |
 | Screen reader output | This spec | §13.5 |
 | Scroll and overflow behaviour | This spec | §9.1 |
+| Responsive breakpoints and SideNav behaviour per viewport | This spec | §16 |
+| Overlay vs push layout mode | This spec | §16.2 |
+| Mobile states (hidden / overlay / collapsed) | This spec | §16.3 |
 | Known design gaps and deferred decisions | This spec | §15 |
 
 **Rule:** if a decision isn't in the table above, check §15 (gaps). If it's not there either, it hasn't been specified yet — add it to the spec before implementing.
@@ -713,3 +716,73 @@ The current collapse/expand control mirrors the existing production behavior: it
 - It creates **inconsistent expectations for keyboard and screen-reader users** — a structural control appears as a peer item inside the `role="tree"` nav, where users expect only navigation destinations
 
 This behavior is retained for the current release to minimise scope and risk. The collapse/expand control **must be revisited** in a future iteration and redesigned as a proper control (e.g. an Action Icon / button tied to the navigation container header, outside the tree), following established patterns for panel toggle controls.
+
+---
+
+## 16. Responsiveness
+
+Figma reference: [SideNav Responsiveness (WIP)](https://www.figma.com/design/3sw45aVcngFAmpbP6cfrXP/%E2%9D%87%EF%B8%8F--Pathway-Design-System--Master-File--MB-2.0-?node-id=40005913-173454&t=C5AHPCaPqyhmnq3s-1)
+
+### 16.1 Breakpoints
+
+All four required breakpoints exist as Figma variables:
+
+| Name | Value | Variable token |
+|---|---|---|
+| Mobile | 393px | `Mobile 393px` |
+| Tablet | 768px | `Tablet 768px` |
+| Small desktop / large tablet | 1024px | `Small Desktop 1024px` |
+| Desktop | 1440px | `Desktop 1440px` |
+
+The 1024px breakpoint is the collapse/overlay threshold (see §16.2).
+
+A fifth value (>1900px) exists in the variables panel but is unused and unconfirmed. 1900px is not a standard value — the nearest standards are 1920px (Full HD) and 2560px (2K). For a desktop-primary product this breakpoint is unlikely to be needed and should be reviewed before use.
+
+### 16.2 SideNav behaviour per breakpoint
+
+| Viewport | Default state | Expanded state layout | Can be fully hidden |
+|---|---|---|---|
+| ≥1440px Desktop | Expanded (250px) | **Push** — content shifts right | No |
+| <1024px (768px + 393px) | Collapsed (72px) | **Overlay** — SideNav floats above content | Yes — via hamburger in top nav |
+
+**Key rules:**
+
+**Persistence:** The SideNav is always visible at every breakpoint — either expanded (250px) or collapsed (72px). It is never hidden by default. Full hiding is an optional user action available only below 1024px, triggered via the top nav hamburger control.
+
+**Push vs overlay:** At ≥1440px, the SideNav occupies space in the page layout — content shifts to accommodate it. Below 1024px, an expanded SideNav floats above the page content as an overlay (does not push it). This is a page-shell layout decision, not a property of the SideNav component itself. The SideNav component is visually identical in both modes.
+
+**Auto-collapse threshold:** At viewport widths below 1024px, the SideNav defaults to collapsed (72px). The user can expand it, which triggers overlay mode. At ≥1440px, the SideNav defaults to expanded; the user can collapse it via the in-nav collapse button.
+
+### 16.3 States below 1024px
+
+Below 1024px, three SideNav states are possible:
+
+**Collapsed (72px) — default:** SideNav is always visible at 72px. Icons only. Content occupies the remaining width (e.g. 321px on a 393px screen — tight but intentional). Popover menus and tooltips appear on hover/tap as documented in §10.
+
+**Expanded overlay (250px):** Triggered by tapping a collapsed item or the expand control. The SideNav expands to 250px and floats above the page content. Content beneath it is still rendered but partially covered. Dismissed via the close button in the top nav (the hamburger icon becomes a close icon when the SideNav is showing).
+
+**Hidden (0px):** Triggered by tapping the close button in the top nav when SideNav is expanded, or the hamburger when SideNav is visible. When hidden, the SideNav is fully removed from view and full screen width is available for content. Restoring it via the hamburger returns it to collapsed (72px) state.
+
+**Overlay dismiss:** The close button in the global top navigation is the sole dismiss mechanism. No tap-outside or swipe gesture is specified.
+
+### 16.4 Top nav hamburger control — concern flagged (out of scope)
+
+At the mobile breakpoint, the Unity Nav (global top navigation) includes a hamburger icon that shows/hides the local SideNav. When the SideNav is visible, the hamburger is replaced by a close icon. **This spec does not change or prescribe anything about the top nav** — that component is out of scope for SideNav.Local.
+
+The following concerns are noted for the top nav team's awareness:
+- A local module control (SideNav visibility) is surfaced inside a global navigation component, mixing local and global concerns.
+- This creates an implicit dependency: the global top nav must know whether the current module has a SideNav.
+- The close-icon-replacing-hamburger pattern is non-standard and may create confusion alongside other top nav interactions.
+
+These are observations only. No action is required from this spec.
+
+### 16.5 Figma component variant guidance
+
+A single `SideNav.Local` component covers all breakpoints. No separate mobile or desktop variants are needed — the component structure and tokens are identical across all sizes.
+
+For designers building screens, expose a `layout` component property with two values:
+
+- `push` — use in desktop frames (≥1440px). SideNav sits in flow, content shifts right.
+- `overlay` — use in tablet and mobile frames (<1024px). SideNav floats above content when expanded.
+
+Pair this with a `state` property: `expanded` / `collapsed` / `hidden` to represent the three states in §16.3. This gives designers everything they need to accurately represent any SideNav state at any breakpoint without a separate component.
