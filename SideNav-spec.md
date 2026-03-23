@@ -900,33 +900,55 @@ A semi-transparent scrim is shown behind the SideNav whenever it is in expanded-
 
 ---
 
-## 17. Figma Make — Implementation Guide
+## 17. AI Agent Implementation Guide (Figma Make and equivalents)
 
-This section is written for AI agents (Figma Make and equivalents). It is a self-contained implementation brief: follow it alongside the relevant sections cited and you will produce a correct SideNav.
-
----
-
-### 17.1 Files to upload
-
-| File | Purpose |
-|---|---|
-| `SideNav-figmamake.html` | Live interactive reference — see all states, interactions, and responsive behaviour in the browser before implementing |
-| `SideNav-spec.md` (this file) | Token values, anatomy, state matrix, accessibility, responsiveness |
+This section is written for AI design and code agents. It is a self-contained brief: read it alongside the sections cited and you will produce a correct SideNav implementation.
 
 ---
 
-### 17.2 What to implement
+### 17.1 Reference files
 
-Always implement **both** of the following as separate Figma frames:
+| File | What it is | When to update it |
+|---|---|---|
+| `SideNav-figmamake.html` | **Static** visual spec sheet — pure HTML/CSS, no JavaScript. Every component state (all item states, CollapseButton both states, all breakpoint shells) visible simultaneously as labelled cards. This is the primary visual reference for any agent implementing this component. | Manually, when design tokens change, a new state is added, or breakpoint behaviour changes. It is NOT auto-generated. |
+| `SideNav-spec.md` (this file) | Token values, anatomy, state matrix, accessibility, responsiveness, interaction. | Maintained alongside the Figma component and the demo. |
+| `SideNav.html` | Interactive React demo — for developer reference and browser testing only. Do NOT use as an agent input file; it requires JavaScript execution and shows only one state at a time. | Maintained by the component owner. |
 
-1. **TopNav** — 64px tall, full-width. Left: Ministry Brands Amplify logo. Right: app-switcher icon + avatar. See the HTML for exact layout.
-2. **SideNav** — implement in the states listed in §17.4. The SideNav and TopNav together form the shell; do not implement one without the other.
+> **For any agent:** use `SideNav-figmamake.html` + `SideNav-spec.md`. Do not use `SideNav.html` — it will not give you what you need.
 
 ---
 
-### 17.3 How to specify nav items
+### 17.2 Understanding responsiveness — what to implement vs what to expect
 
-Use this plain-text format in your prompt. No tables or special formatting needed.
+**The interactive demo (`SideNav.html`) uses CSS media queries and JavaScript state to adapt layout at runtime.** Figma and most design agents do not execute CSS or JavaScript. "Responsive" in Figma means **separate fixed-width frames per breakpoint**, each built independently with Figma auto-layout and constraints.
+
+Do not attempt to make a single Figma frame responsive. Instead, implement one frame per breakpoint:
+
+| Frame | Width | SideNav state |
+|---|---|---|
+| Desktop | 1440px (or fill) | SideNav in-flow, 250px expanded. No hamburger in TopNav. |
+| Desktop — collapsed | 1440px | SideNav in-flow, 72px rail. CollapseButton shows expand icon. |
+| Tablet | 768px | SideNav as 250px overlay drawer. Scrim behind it. Hamburger in TopNav. |
+| Mobile | 390px | SideNav hidden. Only hamburger in TopNav visible. Full-width content. |
+| Mobile — nav open | 390px | 250px overlay drawer + scrim. TopNav shows × icon. No CollapseButton inside nav. |
+
+---
+
+### 17.3 TopNav — always implement alongside SideNav
+
+TopNav and SideNav form a single shell. Never implement one without the other.
+
+**TopNav anatomy:**
+- Height: 64px. Background: `#0f3e80` (Brand Colors/Dark Cerulean).
+- Left side: app-switcher area → logo icon (32×32, rounded, white at 13% opacity) → "Amplify" (14px/600) + "Ministry Brands" (10px/400, white at 69% opacity).
+- Right side: app-switcher icon button (40×40, white at 8% opacity bg, rounded) → avatar (32×32 circle, `#5a7fc0`).
+- At tablet/mobile: hamburger (≡) or close (×) icon button appears on the LEFT, before the logo, depending on nav state. See §16.3.
+
+---
+
+### 17.4 How to specify nav items
+
+Use this plain-text format. No tables or special syntax needed.
 
 ```
 Items (in order):
@@ -936,81 +958,57 @@ Lion (grouper): Florence, Gabrielle
 Zebra (destination)
 ```
 
-Rules:
 - `(grouper)` = Level 0 item with children. Children are always Level 1 Destination items.
-- `(destination)` = Level 0 leaf item. No children.
-- Children listed after the colon are the direct children of that grouper, in order.
-- A grouper with no children listed should be treated as having a placeholder child for layout purposes.
+- `(destination)` = Level 0 leaf item with no children.
+- Children are listed after the colon, in order.
 
 ---
 
-### 17.4 States to implement
+### 17.5 CollapseButton — critical notes
 
-Implement these frames. Each is a distinct Figma frame.
+> The CollapseButton is visible at **all breakpoints ≥768px**, in **both** expanded and collapsed sidebar states. It is hidden only on mobile (<768px).
 
-| Frame | Width | Notes |
+| Sidebar state | Icon | Label |
 |---|---|---|
-| SideNav — Expanded | 250px | Default desktop state. Shows icons + labels. CollapseButton visible at bottom. |
-| SideNav — Collapsed | 72px | Icon-only rail. CollapseButton visible at bottom (expand icon, no label). |
-| SideNav — Grouper expanded (trail) | 250px | A grouper is open, showing children. Grouper in Trail-expanded state (§6). |
-| SideNav — Grouper collapsed with active child | 250px or 72px | Grouper closed but one of its children is the active item. Grouper in Trail-collapsed state — visually identical to Active state: same fill, same stripe, same icon colour (§6, rule 2). |
-| TopNav | 100% | Desktop. Hamburger icon hidden at this breakpoint (≥1024px). |
+| Expanded 250px | `collapse_nav` | "Collapse" visible |
+| Collapsed 72px rail | `expand_nav` | Hidden — no room |
+| Mobile overlay | not rendered | — |
+
+Anatomy: 1px divider above it · `pl-12px` padding (not `px-8px` like SideNavItem) · **no indicator stripe column** · scrolls with content, not sticky. See §9.
 
 ---
 
-### 17.5 CollapseButton — critical implementation notes
+### 17.6 Grouper trail-collapsed state — critical notes
 
-> **The CollapseButton (`Collapse_Expand_Nav_Container`) is visible in BOTH the expanded and the collapsed sidebar states at desktop (≥768px). It is NOT only visible when expanded.**
+> When a grouper is **closed** and one of its children is the **active destination**, the grouper row shows Trail-collapsed state. This is **visually identical to Active state**.
 
-Behaviour by state:
+| Property | Value |
+|---|---|
+| Background | `#3555a014` |
+| Text | `#051428` |
+| Icon | `#3555a0` |
+| `indicator.stripe` | visible, `#3555a0` |
 
-| Sidebar state | Icon shown | Label shown |
-|---|---|---|
-| Expanded (250px) | `collapse_nav` | "Collapse" — visible |
-| Collapsed (72px rail) | `expand_nav` | Hidden (no room at 72px) |
-| Mobile overlay (<768px) | — | **Not rendered at all** (hamburger in TopNav is the sole toggle) |
-
-Anatomy (see §9 for full detail):
-- A 1px divider line (`#edf0f9`) sits above the button, separating it from the nav items.
-- The button row uses `pl-[12px]` padding — **different from SideNavItem** which uses `px-[8px]`.
-- There is **no `indicator.stripe`** column on the CollapseButton row. This is intentional — it is not a nav item.
-- The button scrolls with the nav content; it is not sticky.
+Applies at both 250px and 72px. See §6 rule 2 and §7.
 
 ---
 
-### 17.6 Grouper trail-collapsed state — critical implementation notes
-
-> **When a grouper is closed (collapsed) AND one of its children is the active destination, the grouper row must show Trail-collapsed state. This is visually identical to the Active state.**
-
-Exact tokens to apply to the grouper row in Trail-collapsed state:
-
-| Property | Token | Value |
-|---|---|---|
-| Background fill | `Fill/Contextual/NavItem/Active` | `#3555a014` |
-| Text | `Text/Contextual/NavItem/Active` | `#051428` |
-| Icon | `Icon/Contextual/NavItem/Active` | `#3555a0` |
-| `indicator.stripe` | visible, same colour as icon | `#3555a0` |
-
-This applies in **both** the 250px expanded sidebar and the 72px collapsed rail — whenever a child of that grouper is the active destination, the parent grouper shows Trail-collapsed regardless of whether the sidebar itself is wide or narrow.
-
-See §6 state matrix, rule 2, and §7 for indicator stripe anatomy.
-
----
-
-### 17.7 Figma Make prompt template
+### 17.7 Prompt template
 
 ```
 Using SideNav-figmamake.html as the visual reference and SideNav-spec.md
 as the specification, implement the SideNav shell as Figma auto-layout frames.
 Implement both the TopNav and the SideNav together — they form a single shell.
 
+Create one frame per breakpoint (desktop 1440px, tablet 768px, mobile 390px).
+Do not try to make a single responsive frame — implement each breakpoint separately.
+
 Use these nav items, in order:
-[your list here — see §17.3 for format]
+[your list — see §17.4 for format]
 
 Use these icons:
 [your icon names and source, or attach SVG files]
 
 Match all spacing, colours, and states from the spec exactly.
-Output as a Figma auto-layout frame.
 ```
 
