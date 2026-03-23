@@ -123,21 +123,21 @@ Use the stroked variant when modules need an explicit visual boundary — for ex
 | Semantic Token | Primitive | Resolved Value | Usage |
 |---|---|---|---|
 | `Surface/Nav/Light` | — | `#fafafa` | SideNav container background |
-| *(canvas surface — see §8.1)* | — | `#fafafa` | Page/viewport background |
+| `Surface/Canvas/Light` | `Brand/10` | `#fafafa` | Page/viewport background |
 
-> **⚠ Gap:** The canvas/page background token name has not been confirmed from the Figma variable set queried. It shares the same hex as `Surface/Nav/Light`.
+> **Note:** Both tokens resolve to the same hex (`#fafafa`). They are semantically distinct — `Surface/Nav/Light` is the nav panel's own background; `Surface/Canvas/Light` is the page/app canvas behind it. Do not merge them. Confirmed in Figma variable library: `Surface/Canvas/Light → Brand/10 → #fafafa`.
 
 ### 3.2 Fill (NavItem states)
 
 | Semantic Token | Primitive | Resolved Value | Used In |
 |---|---|---|---|
 | `Fill/Contextual/NavItem/Base` | — | `#fafafa` | Resting item fill |
-| `Fill/Contextual/NavItem/Hover` | — | `rgba(17,17,17,0.04)` | Hover fill |
-| `Fill/Contextual/NavItem/Active` | — | `rgba(53,85,160,0.08)` | Active destination + collapsed-trail grouper |
-| `Fill/Contextual/NavItem/Trail` | — | `rgba(17,17,17,0.04)` | Expanded grouper (distinct token from Hover — do not merge) |
+| `Fill/Contextual/NavItem/Hover` | — | `#1111110a` *(≈ rgba 17,17,17 / 4%)* | Hover fill |
+| `Fill/Contextual/NavItem/Active` | — | `#3555a014` *(≈ rgba 53,85,160 / 8%)* | Active destination + collapsed-trail grouper |
+| `Fill/Contextual/NavItem/Trail` | — | `#11111105` *(≈ rgba 17,17,17 / 2%)* | Expanded grouper fill — **distinct token from Hover** |
 | `Fill/Static/Info/Subtle` | — | `#edf0f9` | Divider (`h-[1px]`) + nav container `border-right` |
 
-> **Note:** `Fill/Contextual/NavItem/Trail` and `Fill/Contextual/NavItem/Hover` resolve to the same hex today. They must remain **separate tokens** because they have distinct semantic meaning and may diverge in a future design update.
+> **Note:** `Fill/Contextual/NavItem/Trail` and `Fill/Contextual/NavItem/Hover` have **diverged** — they now resolve to different alpha values (Hover `#1111110a` ≈ 4%, Trail `#11111105` ≈ 2%). Keep them as separate tokens and do not merge.
 
 > **⚠ Gap:** Primitive token names are not surfaced by `get_variable_defs` — the tool resolves alias chains to final hex only. The full `Semantic → Primitive → Hex` chain requires the Figma REST API or a dedicated token documentation frame.
 
@@ -717,8 +717,8 @@ No named tokens exist for: nav container padding (12px H / 14px V), item gap (8p
 ### 15.2 Primitive token names not surfaced (MEDIUM priority)
 `get_variable_defs` (Figma MCP tool) resolves semantic token alias chains to their final hex value but does not expose intermediate primitive token names. The full chain `Semantic → Primitive → Hex` cannot be reconstructed from MCP alone. This blocks documentation of the full token lineage. **Recommend:** either expose primitives in a dedicated Figma frame/page, or use the Figma REST API (`GET /v1/files/:key/variables`) which does return the full alias chain.
 
-### 15.3 Canvas surface token name unconfirmed (LOW priority)
-The page/viewport background is `#fafafa` (same as `Surface/Nav/Light`). The semantic token name for the canvas surface has not been retrieved from Figma. This should be confirmed and documented.
+### 15.3 Canvas surface token name — RESOLVED
+Confirmed via Figma variable library: token is `Surface/Canvas/Light`, maps to primitive `Brand/10` → `#fafafa`. Updated in §3.1 and all references. Both nav and canvas surfaces share the same hex but must remain distinct tokens.
 
 ### 15.4 Icon inner size token missing (LOW priority)
 `Icon.Leading` inside `Container.LeadingIcon` renders at `14×14pt`. `Accessibility/Icon Wrapping/Large` documents the `24px` wrapper but there is no token for the inner icon size. Recommend `Accessibility/Icon/Leading/Size` or similar.
@@ -769,31 +769,37 @@ A fifth value (>1900px) exists in the variables panel but is unused and unconfir
 
 | Viewport | Default state | Expanded state layout | Can be fully hidden |
 |---|---|---|---|
-| ≥1440px Desktop | Expanded (250px) | **Push** — content shifts right | No |
-| 768px–1023px Tablet | Collapsed (72px) | **Overlay** — SideNav floats above content | No |
-| <768px Mobile | Collapsed (72px) | **Overlay, full-width** — SideNav fills viewport width | Yes — via hamburger/close in global top nav |
+| ≥1024px Desktop | Expanded (250px) | **Push** — content shifts right | No |
+| 768px–1023px Tablet | Collapsed (72px) | **Overlay** — 250px panel floats above content, scrim behind | No |
+| <768px Mobile | **Hidden** (default) | **Full-width overlay** — slides over entire viewport width | Yes — hamburger/close in global top nav |
 
 **Key rules:**
 
-**Persistence:** The SideNav is always visible at every breakpoint — either expanded (250px) or collapsed (72px). It is never hidden by default. Full hiding is an optional user action available **only below 768px** (mobile), triggered via the hamburger/close control in the global top nav. At tablet (768–1023px), the SideNav cannot be hidden — only collapsed or expanded.
+**Desktop (≥1024px) — in-flow, always visible:** SideNav occupies layout space. Expanded (250px) by default; user can collapse to 72px via the in-nav collapse button. Content shifts to accommodate whichever width is active.
 
-**Push vs overlay:** At ≥1024px, the SideNav occupies space in the page layout — content shifts to accommodate it. Below 1024px, an expanded SideNav floats above the page content as an overlay (does not push it). This is a page-shell layout decision, not a property of the SideNav component itself. The SideNav component is visually identical in both modes.
+**Tablet (768–1023px) — overlay, always visible:** SideNav is collapsed (72px) by default and always in-flow. User can expand it, which causes it to float as a 250px overlay above the page content (with a scrim behind). Collapsing returns it to the 72px in-flow rail. The nav cannot be hidden at tablet — only collapsed or expanded.
 
-**Auto-collapse threshold:** At viewport widths below 1024px, the SideNav defaults to collapsed (72px). The user can expand it, which triggers overlay mode. At ≥1024px, the SideNav defaults to expanded; the user can collapse it via the in-nav collapse button.
+**Mobile (<768px) — hidden by default:** The SideNav is fully hidden on initial load. The hamburger control in the global top nav reveals it as a full-width (100vw) overlay. Closing via the overlay's collapse button or top-nav close icon hides it again. **There is no 72px collapsed rail state on mobile** — the icon-only rail is unsuitable for touch screens (hover popovers don't apply) and consumes too much of a narrow viewport.
 
-**Top nav variant:** The global top nav shows its full desktop layout (app switcher, org switcher, search bar, icons, avatar) at ≥768px. Below 768px it switches to the mobile layout (hamburger/close, centred app icon, ellipsis, avatar). See §16.4 for the Figma reference.
+**Push vs overlay:** At ≥1024px, the SideNav is in the page's layout flow — it takes up width. Below 1024px, the SideNav floats as an overlay above the content — it does not shift the page. This is a page-shell concern, not a SideNav component property.
+
+**Top nav variant:** The global top nav shows its full desktop layout at ≥768px (no hamburger). Below 768px it switches to the mobile layout (hamburger/close, app icon, ellipsis, avatar). See §16.4 for details.
 
 ### 16.3 States below 1024px
 
-Below 1024px, up to three SideNav states are possible depending on breakpoint:
+#### Tablet (768–1023px) — two states
 
-**Collapsed (72px) — default:** SideNav is always visible at 72px. Icons only. Content occupies the remaining width. Popover menus and tooltips appear on hover/tap as documented in §10.
+**Collapsed rail (72px) — default at tablet:** SideNav is always visible as a 72px icon-only rail. Content fills the remaining width. Tap a grouped item to get a popover menu; tap a destination to navigate. This matches the `SideNav.Collapsed` touch-interaction pattern — Figma includes "Mobile: Tap Main Item" and "Mobile: Tap Grouper" instances in the `SideNav Instances/Interaction` frame specifically documenting this. (The "Mobile" label refers to touch/pointer context, not viewport size.)
 
-**Expanded overlay:** Triggered by tapping a collapsed item or the expand control. The SideNav expands and floats above the page content as an overlay. At tablet (768–1023px) it is 250px wide with a scrim; at mobile (<768px) it fills the full viewport width with no scrim.
+**Expanded overlay (250px) — triggered at tablet:** User expands the nav via the expand control. SideNav slides over the page content as a 250px-wide overlay. A scrim appears behind it. Tapping the scrim or the collapse control dismisses the overlay and returns to the 72px rail.
 
-**Hidden (0px) — mobile only (<768px):** Available exclusively below 768px via the hamburger/close control in the global top nav. When hidden, the SideNav is fully removed from view. Restoring it via the hamburger returns it to collapsed (72px) state. **This state is not available at tablet (768–1023px).**
+#### Mobile (<768px) — two states only (no 72px collapsed rail)
 
-**Overlay dismiss:** The close button in the global top navigation is the sole dismiss mechanism. No tap-outside or swipe gesture is specified.
+**Hidden — default at mobile:** The SideNav is fully hidden on load. The hamburger icon (≡) appears in the global top nav. **There is no 72px collapsed rail on mobile.** The icon-only rail pattern is not appropriate for touch-only screens: hover popovers don't trigger, icon-only navigation is ambiguous at phone scale, and 72px represents ~20% of a 390px viewport.
+
+**Full-width overlay — triggered at mobile:** Tapping the hamburger slides the SideNav in as a full-width (100vw) drawer covering the entire viewport. The global top nav shows the close icon (×). Tapping close, or pressing the SideNav's internal collapse button, fully hides the nav again (returns to hamburger ≡ state — does **not** stop at 72px collapsed).
+
+**Overlay dismiss:** On tablet, tapping the scrim or the in-nav collapse button closes the overlay. On mobile, the top-nav hamburger/close toggle and the in-nav collapse button are the dismiss mechanisms. No swipe-to-dismiss gesture is specified.
 
 ### 16.4 Global top nav (Unity Nav) — out of scope, Figma reference
 
@@ -803,7 +809,7 @@ For SideNav integration purposes only, the relevant behaviour is:
 
 **At ≥768px (desktop/tablet layout):** Full nav bar — app switcher, org switcher, search bar, icon buttons, avatar. No hamburger control. SideNav cannot be hidden at these sizes.
 
-**At <768px (mobile layout):** Simplified nav bar — hamburger/close toggle on the left, centred app icon, ellipsis and avatar on the right. The hamburger/close icon state is driven by SideNav visibility: close icon (×) is shown whenever the SideNav is visible (collapsed or expanded), hamburger (≡) is shown only when the SideNav is hidden.
+**At <768px (mobile layout):** Simplified nav bar — hamburger/close toggle on the left, centred app icon, ellipsis and avatar on the right. Icon state: hamburger (≡) when the SideNav is hidden (default), close (×) when the full-width overlay is open. The toggle controls the hidden ↔ full-overlay transition only — there is no intermediate 72px collapsed state on mobile.
 
 This spec does not prescribe anything about the top nav's visual design, tokens, or other interactions. For all top nav specs, refer to the Figma link above.
 
@@ -820,39 +826,50 @@ Pair this with a `state` property: `expanded` / `collapsed` / `hidden` to repres
 
 ### 16.6 Overlay enter/exit animation
 
-When the SideNav transitions from hidden or collapsed-to-overlay (i.e. it expands and enters overlay mode below 1024px), it animates into view from the left edge of the viewport.
+The overlay panel (`.overlay-panel`) uses CSS transitions rather than one-shot keyframe animations. The overlay container always remains in the DOM when `!isDesktop`, and `.overlay-panel--open` class is toggled to drive both the enter and exit transitions. This is intentional: keyframe animations only play on insertion; a CSS transition reverses smoothly when the class is removed, giving a proper exit without instant-removal flash.
 
-**Enter animation:**
+**Enter (`.overlay-panel--open` added):**
 
 | Property | Value |
 |---|---|
-| Transform | `translateX(-100%)` → `translateX(0)` |
+| Transform | `translateX(-110%)` → `translateX(0)` — 110% hides any shadow bleed |
 | Opacity | `0` → `1` |
-| Duration | `250ms` |
-| Easing | `cubic-bezier(0.4, 0, 0.2, 1)` (Material standard easing — fast out, slow in) |
-| Fill mode | `forwards` |
+| Transform duration | `280ms` |
+| Opacity duration | `200ms` (opacity settles before slide completes — intentional layering) |
+| Easing | `cubic-bezier(0.4, 0, 0.2, 1)` (Material standard) |
 
-Both the transform and opacity animate simultaneously. The combination of slide-from-left and fade-in gives the panel a purposeful, physical quality without being distracting.
+**Exit (`.overlay-panel--open` removed):** Same transition reverses — panel slides back left and fades out simultaneously over 280ms. No separate exit keyframe is needed.
 
-**Exit animation:** Not specified for the current release. The overlay is removed from the DOM immediately on dismiss (hamburger/close tap). A future iteration may add a reverse slide/fade exit.
+**Scrim (`.overlay-scrim`):** Opacity `0` → `1` on show, `1` → `0` on dismiss. `280ms`, same easing. `pointer-events: none` when invisible (no click-through).
 
-**Reduced motion:** When the user has `prefers-reduced-motion: reduce` set, the transform animation is suppressed entirely. Only the opacity transition (`0` → `1`, same duration and easing) is applied. The panel appears to fade in without movement.
+**Reduced motion (`prefers-reduced-motion: reduce`):** Transform is suppressed (`transform: none !important`). Only opacity fades remain, shortened to `150ms linear`.
 
 ```css
-@keyframes navSlideIn {
-  from { transform: translateX(-100%); opacity: 0; }
-  to   { transform: translateX(0);     opacity: 1; }
+.overlay-panel {
+  position: fixed; left: 0; bottom: 0; z-index: 100;
+  transform: translateX(-110%);
+  opacity: 0; pointer-events: none;
+  transition:
+    transform 280ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity   200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
+.overlay-panel--open { transform: translateX(0); opacity: 1; pointer-events: auto; }
+
+.overlay-scrim {
+  position: fixed; top: 64px; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.32); z-index: 99;
+  opacity: 0; pointer-events: none;
+  transition: opacity 280ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.overlay-scrim--visible { opacity: 1; pointer-events: auto; }
 
 @media (prefers-reduced-motion: reduce) {
-  .unity-nav {
-    animation: none;
-    opacity: 1;
-  }
+  .overlay-panel, .overlay-panel--open { transform: none !important; transition: opacity 150ms linear; }
+  .overlay-scrim { transition: opacity 150ms linear; }
 }
 ```
 
-**Figma:** Static states only — the animation is a code concern and does not need to be represented in Figma component variants. Designers should use the `overlay` + `expanded` variant to represent the open state.
+**Figma:** Static states only. Animation is a code concern; it does not need Figma component variants. Use `overlay` + `expanded` variant to represent the open state in designs.
 
 ### 16.7 Scrim (backdrop overlay)
 
@@ -865,13 +882,13 @@ A semi-transparent scrim is shown behind the SideNav whenever it is in expanded-
 | Colour | `rgba(0, 0, 0, 0.32)` | 32% black — standard modal-overlay opacity |
 | Position | `position: fixed; top: 64px; left: 0; right: 0; bottom: 0` | Sits below the top nav bar |
 | Z-index | `99` | Behind SideNav overlay (`z-index: 100`), above page content |
-| Enter animation | Opacity `0` → `1`, `250ms`, same easing as nav panel | Synchronised with nav slide-in |
-| Exit | Removed from DOM on SideNav dismiss | No exit animation specified |
+| Enter animation | Opacity `0` → `1`, `280ms`, `cubic-bezier(0.4,0,0.2,1)` | Synchronised with nav slide-in |
+| Exit animation | Opacity `1` → `0`, same duration and easing | CSS transition reversal — scrim stays in DOM |
 
 **Breakpoint rules:**
 
-- **<768px (Mobile):** No scrim. The SideNav expands to full viewport width when open, leaving no visible page content behind it — a scrim would be invisible and redundant.
-- **768px–1023px (Tablet):** Scrim shown. The SideNav is 250px wide; the remaining page content is visible to the right. The scrim indicates that content is blocked.
+- **<768px (Mobile):** No scrim. The SideNav expands to full viewport width, covering the entire page — a scrim would be invisible and redundant.
+- **768px–1023px (Tablet):** Scrim shown. The SideNav is 250px wide; page content is visible to the right. The scrim signals that content is temporarily inaccessible.
 - **≥1024px:** No overlay mode; no scrim.
 
-**Interaction:** The scrim is intentionally non-interactive in the current release. Tapping it does **not** dismiss the SideNav. The close button in the top nav is the sole dismiss mechanism (see §16.3). This keeps the interaction model simple and avoids accidental dismissal. Tap-outside-to-dismiss may be considered in a future iteration.
+**Interaction:** Tapping the scrim dismisses the SideNav overlay (returns to 72px collapsed rail). This is the standard mobile drawer tap-outside pattern. The in-nav collapse button is the alternative dismiss path.

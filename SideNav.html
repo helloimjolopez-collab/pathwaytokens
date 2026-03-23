@@ -52,21 +52,49 @@
   }
 
   /* ── RESPONSIVE LAYOUT ─────────────────────────────────────── */
-  /* Nav overlay — slides in from left                           */
-  @keyframes navSlideIn {
-    from { transform: translateX(-100%); opacity: 0; }
-    to   { transform: translateX(0);     opacity: 1; }
+  /* Overlay nav panel — always rendered when !isDesktop, CSS transitions
+     drive both enter AND exit so there is no instant-removal flash.
+     Enter: transform 280ms + opacity 200ms (slide leads, fade trails).
+     Exit:  same transitions in reverse when --open class is removed.    */
+  .overlay-panel {
+    position: fixed; left: 0; bottom: 0; z-index: 100;
+    /* top/width set via inline style (isNavDesktop ? 64 : 0  /  overlayNavW) */
+    transform: translateX(-110%);   /* 110% hides any box-shadow bleed      */
+    opacity: 0;
+    pointer-events: none;           /* non-visible panel must not eat clicks */
+    transition:
+      transform 280ms cubic-bezier(0.4, 0, 0.2, 1),
+      opacity   200ms cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
   }
-  /* Scrim — fades in (tablet overlay only)                      */
-  @keyframes scrimIn {
-    from { opacity: 0; }
-    to   { opacity: 1; }
+  .overlay-panel--open {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
   }
+
+  /* Scrim — tablet overlay only (768–1023px). Always rendered on tablet so the
+     fade-out plays when overlay closes instead of the element just vanishing.  */
+  .overlay-scrim {
+    position: fixed; top: 64px; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.32); z-index: 99;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 280ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .overlay-scrim--visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    @keyframes navSlideIn {
-      from { opacity: 0; }
-      to   { opacity: 1; }
+    /* Remove slide — keep opacity fade only, shorter duration */
+    .overlay-panel,
+    .overlay-panel--open {
+      transform: none !important;
+      transition: opacity 150ms linear;
     }
+    .overlay-scrim { transition: opacity 150ms linear; }
   }
 </style>
 </head>
@@ -81,16 +109,17 @@ const { useState, useRef, useEffect } = React;
 const T = {
   fill: {
     navBase:    "#fafafa",               // Fill/Contextual/NavItem/Base
-    navHover:   "rgba(17,17,17,0.04)",   // Fill/Contextual/NavItem/Hover
-    navActive:  "rgba(53,85,160,0.08)",  // Fill/Contextual/NavItem/Active
-    navTrail:   "rgba(17,17,17,0.04)",   // Fill/Contextual/NavItem/Trail — distinct token from Hover
+    navHover:   "#1111110a",             // Fill/Contextual/NavItem/Hover  (≈rgba(17,17,17,0.04))
+    navActive:  "#3555a014",             // Fill/Contextual/NavItem/Active (≈rgba(53,85,160,0.08))
+    navTrail:   "#11111105",             // Fill/Contextual/NavItem/Trail  (≈rgba(17,17,17,0.02))
+    // Note: Trail and Hover LOOK similar but are distinct tokens that diverge over time.
+    // Figma now resolves them differently: Hover=#1111110a(~4%), Trail=#11111105(~2%).
     infoSubtle: "#edf0f9",               // Fill/Static/Info/Subtle — divider + nav border-right
   },
   surface: {
     navLight:   "#fafafa",               // Surface/Nav/Light — nav container background
-    // Canvas surface uses the same hex. Pending confirmation of its semantic token name
-    // from Figma (not surfaced in the SideNav component token set queried so far).
-    canvas:     "#fafafa",
+    canvas:     "#fafafa",               // Surface/Canvas/Light — page/viewport background
+    // Confirmed in Figma variable library: Surface/Canvas/Light → Brand/10 → #fafafa
   },
   text: {
     navBase:    "#363636",               // Text/Contextual/NavItem/Base
@@ -676,9 +705,9 @@ const TOKEN_ROWS = [
   { cat:"Surface", semantic:"Surface/Canvas (⚠ unconfirmed)", prim:"—",        value:"#fafafa",              role:"Page/canvas background — token name TBC" },
   // Fill
   { cat:"Fill",    semantic:"Fill/Contextual/NavItem/Base",   prim:"—",        value:"#fafafa",              role:"Item resting fill" },
-  { cat:"Fill",    semantic:"Fill/Contextual/NavItem/Hover",  prim:"—",        value:"rgba(17,17,17,0.04)",  role:"Item hover fill" },
-  { cat:"Fill",    semantic:"Fill/Contextual/NavItem/Active", prim:"—",        value:"rgba(53,85,160,0.08)", role:"Active + collapsed-trail fill" },
-  { cat:"Fill",    semantic:"Fill/Contextual/NavItem/Trail",  prim:"—",        value:"rgba(17,17,17,0.04)",  role:"Expanded grouper fill (distinct token from Hover)" },
+  { cat:"Fill",    semantic:"Fill/Contextual/NavItem/Hover",  prim:"—",        value:"#1111110a",            role:"Item hover fill (≈rgba 17,17,17 / 4%)" },
+  { cat:"Fill",    semantic:"Fill/Contextual/NavItem/Active", prim:"—",        value:"#3555a014",            role:"Active + collapsed-trail fill (≈rgba 53,85,160 / 8%)" },
+  { cat:"Fill",    semantic:"Fill/Contextual/NavItem/Trail",  prim:"—",        value:"#11111105",            role:"Expanded grouper fill (≈rgba 17,17,17 / 2%) — distinct from Hover" },
   { cat:"Fill",    semantic:"Fill/Static/Info/Subtle",        prim:"—",        value:"#edf0f9",              role:"Divider + nav border-right" },
   // Text
   { cat:"Text",    semantic:"Text/Contextual/NavItem/Base",   prim:"—",        value:"#363636",              role:"Label default" },
@@ -916,24 +945,31 @@ function TopNav({ isNavDesktop, navHidden, onHamburgerClick }) {
   );
 }
 
-// ─── SCRIM ────────────────────────────────────────────────────────────────────
-// Shown behind the SideNav overlay on tablet (768–1023px) only.
-// Tablet overlay: rgba(0,0,0,0.32). Tap to dismiss.
-// Not shown on mobile — SideNav is full-width so nothing is behind it.
-function Scrim({ onClick }) {
-  return (
-    <div onClick={onClick}
-      style={{ position:"fixed", top:64, left:0, right:0, bottom:0,
-        background:"rgba(0,0,0,0.32)", zIndex:99,
-        animation:"scrimIn 250ms cubic-bezier(0.4,0,0.2,1) forwards" }} />
-  );
-}
-
 // ─── APP ──────────────────────────────────────────────────────────────────────
-// Responsive layout: ≥1024px desktop (push), <1024px overlay.
-// Below 768px: SideNav fills full screen width when open.
-// 768–1023px: SideNav is 250px overlay with scrim.
-// Top nav is always present (fixed, 64px).
+// Responsive layout — three breakpoint zones:
+//
+//  ≥1024px  DESKTOP   push layout    SideNav is in-flow (expanded 250px or collapsed 72px)
+//                                    TopNav: position:fixed (height 64px)
+//                                    Body area: marginTop:64, left by SideNav width
+//
+//  768–1023px TABLET  overlay layout SideNav slides over content (250px wide, 72px collapsed)
+//                                    TopNav: position:fixed
+//                                    Scrim (rgba 0,0,0,0.32) shown behind overlay
+//                                    Collapse button on overlay nav → collapses back to 72px rail
+//
+//  <768px   MOBILE    hidden + full overlay
+//                                    SideNav hidden by default (hamburger icon in TopNav)
+//                                    Opening → full-width (100vw) overlay drawer
+//                                    NO 72px collapsed state on mobile (hover/popover patterns
+//                                    don't apply to touch devices; screen width too narrow)
+//                                    TopNav: position:relative (in-flow, not fixed)
+//                                    Closing overlay → nav fully hidden again (not collapsed)
+//
+// Animation strategy (CSS transitions on .overlay-panel / .overlay-scrim):
+//   Always keep overlay panel + tablet scrim in the DOM when !isDesktop.
+//   Toggle .overlay-panel--open / .overlay-scrim--visible via CSS class.
+//   This lets the EXIT transition play — conditional rendering would unmount
+//   the element immediately, giving an instant-removal flash with no exit.
 function App() {
   const [activeId, setActiveId] = useState("balance_sheet");
 
@@ -1020,23 +1056,33 @@ function App() {
       <div style={{ display:"flex", flex:1, overflow:"hidden",
         marginTop: isNavDesktop ? 64 : 0, position:"relative" }}>
 
-        {/* Scrim — tablet overlay only (768–1023px) */}
-        {isOverlay && isTablet && (
-          <Scrim onClick={() => setSidebarCollapsed(true)} />
+        {/* ── SCRIM — tablet overlay only (768–1023px) ───────────────────── */}
+        {/* Always rendered on tablet (not conditional on isOverlay) so the CSS
+            transition can fade it OUT when the overlay closes. Removing it from
+            the DOM on close would make it vanish instantly. pointer-events are
+            managed by the CSS class — no click-through when invisible.         */}
+        {isTablet && (
+          <div
+            onClick={() => setSidebarCollapsed(true)}
+            className={isOverlay ? "overlay-scrim overlay-scrim--visible" : "overlay-scrim"}
+          />
         )}
 
-        {/* Overlay SideNav — tablet and mobile, when expanded */}
-        {isOverlay && !isDesktop && (
-          <div style={{ position:"fixed", top: isNavDesktop ? 64 : 0, left:0, bottom:0,
-            width: overlayNavW, zIndex:100,
-            animation:"navSlideIn 250ms cubic-bezier(0.4,0,0.2,1) forwards" }}>
+        {/* ── OVERLAY SIDENAV — tablet + mobile ───────────────────────────── */}
+        {/* Always rendered when !isDesktop so the CSS transition can slide it
+            OUT when the overlay closes. The --open class drives enter/exit.
+            top/width are inline (dynamic: isNavDesktop ? 64 : 0, overlayNavW). */}
+        {!isDesktop && (
+          <div
+            className={isOverlay ? "overlay-panel overlay-panel--open" : "overlay-panel"}
+            style={{ top: isNavDesktop ? 64 : 0, width: overlayNavW }}>
             <SideNav activeId={activeId} onNavigate={handleNavigate}
               sidebarCollapsed={false}
               onCollapseChange={v => {
                 if (v) {
                   setSidebarCollapsed(true);
-                  // On mobile the nav only has two states: hidden or full overlay.
-                  // Closing the overlay goes back to "hidden" (hamburger visible).
+                  // Mobile only: nav has two states — hidden (hamburger) or full overlay.
+                  // Pressing CollapseButton on mobile goes back to hidden, not 72px collapsed.
                   if (isMobile) setNavHidden(true);
                 }
               }} />
