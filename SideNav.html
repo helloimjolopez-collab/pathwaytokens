@@ -58,7 +58,7 @@
      Exit:  same transitions in reverse when --open class is removed.    */
   .overlay-panel {
     position: fixed; left: 0; bottom: 0; z-index: 100;
-    /* top/width set via inline style (isNavDesktop ? 64 : 0  /  overlayNavW) */
+    /* top:64 / width:overlayNavW(250) set via inline style (see App render)   */
     transform: translateX(-110%);   /* 110% hides any box-shadow bleed      */
     opacity: 0;
     pointer-events: none;           /* non-visible panel must not eat clicks */
@@ -128,7 +128,7 @@ const T = {
   },
   icon: {
     navBase:    "#4b4b4b",               // Icon/Contextual/NavItem/Base — also trail-expanded icon
-    navHover:   "#3b3b3b",               // Icon/Contextual/NavItem/Hover
+    navHover:   "#363636",               // Icon/Contextual/NavItem/Hover (updated Figma — was #3b3b3b)
     navActive:  "#3555a0",               // Icon/Contextual/NavItem/Active — icon + indicator.stripe
   },
   indicator:    "#3555a0",               // indicator.stripe = var(--icon/contextual/navitem/active)
@@ -166,7 +166,7 @@ const L = {
 // Instead, consume icons from the Pathway icon package (e.g. @pathway/icons or
 // the Ministry Brands design system icon library). Use the semantic token chain:
 //   Icon/Contextual/NavItem/Base   → #4b4b4b  (resting + trail-expanded)
-//   Icon/Contextual/NavItem/Hover  → #3b3b3b  (hover)
+//   Icon/Contextual/NavItem/Hover  → #363636  (hover)
 //   Icon/Contextual/NavItem/Active → #3555a0  (active + collapsed-trail)
 // Import example (React): import { AppsIcon } from '@pathway/icons';
 // Then apply color via the `color` or `fill` prop per your icon library's API.
@@ -607,7 +607,7 @@ function CollapseButton({ isSidebarCollapsed, onToggle }) {
 // Padding: px-[12px] py-[14px] (no semantic tokens — Figma gap)
 // Width: 250px expanded, 72px collapsed — Figma: 72px (12px padding × 2 + 48px item)
 // Border-right: 0.5px (--border-width/xs) solid Fill/Static/Info/Subtle (#edf0f9)
-function SideNav({ activeId, onNavigate, sidebarCollapsed, onCollapseChange }) {
+function SideNav({ activeId, onNavigate, sidebarCollapsed, onCollapseChange, hideCollapseButton }) {
   const setSidebarCollapsed = onCollapseChange;
   const [expanded, setExpanded] = useState({ view: true });
   const [popoverId, setPopoverId] = useState(null);
@@ -686,11 +686,16 @@ function SideNav({ activeId, onNavigate, sidebarCollapsed, onCollapseChange }) {
         {/* Spacer pushes collapse button to bottom */}
         <div style={{ flex:1 }} />
 
-        {/* Collapse_Expand_Nav_Container: pt-[4px] gap-[4px] */}
-        <div style={{ paddingTop:L.collapseGap }}>
-          <CollapseButton isSidebarCollapsed={sidebarCollapsed}
-            onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
-        </div>
+        {/* Collapse_Expand_Nav_Container: pt-[4px] gap-[4px].
+            Hidden on mobile — no 72px collapsed rail exists on mobile,
+            so the collapse/expand affordance is meaningless there.
+            The TopNav hamburger/close is the sole toggle on mobile.       */}
+        {!hideCollapseButton && (
+          <div style={{ paddingTop:L.collapseGap }}>
+            <CollapseButton isSidebarCollapsed={sidebarCollapsed}
+              onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
+          </div>
+        )}
       </div>
     </nav>
   );
@@ -702,7 +707,7 @@ function SideNav({ activeId, onNavigate, sidebarCollapsed, onCollapseChange }) {
 const TOKEN_ROWS = [
   // Surface
   { cat:"Surface", semantic:"Surface/Nav/Light",              prim:"—",        value:"#fafafa",              role:"SideNav container background" },
-  { cat:"Surface", semantic:"Surface/Canvas (⚠ unconfirmed)", prim:"—",        value:"#fafafa",              role:"Page/canvas background — token name TBC" },
+  { cat:"Surface", semantic:"Surface/Canvas/Light",           prim:"Brand/10",  value:"#fafafa",              role:"Page/viewport background (confirmed Figma variable)" },
   // Fill
   { cat:"Fill",    semantic:"Fill/Contextual/NavItem/Base",   prim:"—",        value:"#fafafa",              role:"Item resting fill" },
   { cat:"Fill",    semantic:"Fill/Contextual/NavItem/Hover",  prim:"—",        value:"#1111110a",            role:"Item hover fill (≈rgba 17,17,17 / 4%)" },
@@ -715,7 +720,7 @@ const TOKEN_ROWS = [
   { cat:"Text",    semantic:"Text/Contextual/NavItem/Active", prim:"—",        value:"#051428",              role:"Label active + ALL trail states" },
   // Icon
   { cat:"Icon",    semantic:"Icon/Contextual/NavItem/Base",   prim:"—",        value:"#4b4b4b",              role:"Icon default + expanded trail icon" },
-  { cat:"Icon",    semantic:"Icon/Contextual/NavItem/Hover",  prim:"—",        value:"#3b3b3b",              role:"Icon hover" },
+  { cat:"Icon",    semantic:"Icon/Contextual/NavItem/Hover",  prim:"—",        value:"#363636",              role:"Icon hover" },
   { cat:"Icon",    semantic:"Icon/Contextual/NavItem/Active", prim:"—",        value:"#3555a0",              role:"Icon active + collapsed-trail + indicator.stripe" },
   // Geometry
   { cat:"Radius",  semantic:"Component/NavItem/Large/Radius", prim:"Border/S", value:"8px",                  role:"Item corner radius" },
@@ -997,8 +1002,8 @@ function App() {
     if (bp === prevBp.current) return;
     prevBp.current = bp;
     if (bp === 2) { setNavHidden(false); setSidebarCollapsed(false); }       // desktop → expanded
-    else if (bp === 1) { setNavHidden(false); setSidebarCollapsed(true); }   // tablet  → collapsed
-    else              { setSidebarCollapsed(true); }                          // mobile  → collapsed, hamburger controls hidden
+    else if (bp === 1) { setNavHidden(false); setSidebarCollapsed(true); }   // tablet  → collapsed rail
+    else              { setNavHidden(true);  setSidebarCollapsed(true); }    // mobile  → hidden (hamburger ≡ default)
   }, [viewportW]);
 
   const isDesktop   = viewportW >= 1024; // SideNav layout: push vs overlay
@@ -1023,10 +1028,12 @@ function App() {
     }
   };
 
-  // Navigate and close overlay on mobile
   const handleNavigate = (id) => {
     setActiveId(id);
-    if (!isDesktop && !sidebarCollapsed) setSidebarCollapsed(true);
+    // Mobile: close the full-screen overlay after navigation so the page is visible.
+    // Tablet: keep the 250px overlay open — content is visible beside the nav,
+    //         so there's no need to force-close on every navigation.
+    if (isMobile && !sidebarCollapsed) { setSidebarCollapsed(true); setNavHidden(true); }
   };
 
   const all    = NAV.flatMap(item => item.children ? [item, ...item.children] : [item]);
@@ -1035,8 +1042,11 @@ function App() {
   const PageIconSource = NAV.find(i => i.id === activeId) || parent;
   const pageIconName = PageIconSource && PageIconSource.icon;
 
-  // Overlay nav width: full screen on mobile, 250px on tablet
-  const overlayNavW = isMobile ? "100%" : 250;
+  // Overlay nav width: 250px at all breakpoints — consistent drawer width.
+  // Even on a 393px phone, 250px leaves a 143px scrim strip to tap outside.
+  // Full-width overlays feel like modals and destroy context; 250px is industry
+  // standard (Gmail, Slack, WhatsApp all use ~260–320px drawers on phone).
+  const overlayNavW = 250;
 
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100vh",
@@ -1056,14 +1066,18 @@ function App() {
       <div style={{ display:"flex", flex:1, overflow:"hidden",
         marginTop: isNavDesktop ? 64 : 0, position:"relative" }}>
 
-        {/* ── SCRIM — tablet overlay only (768–1023px) ───────────────────── */}
-        {/* Always rendered on tablet (not conditional on isOverlay) so the CSS
-            transition can fade it OUT when the overlay closes. Removing it from
-            the DOM on close would make it vanish instantly. pointer-events are
-            managed by the CSS class — no click-through when invisible.         */}
-        {isTablet && (
+        {/* ── SCRIM — all overlay breakpoints (tablet + mobile) ──────────── */}
+        {/* Shown at all non-desktop breakpoints whenever the overlay is open.
+            On mobile (<768px) the nav is 250px wide, leaving a 143px+ strip of
+            page content visible — the scrim dims it and provides a tap target
+            to dismiss. Always rendered when !isDesktop (not conditional on
+            isOverlay) so the CSS fade-out transition plays on close.           */}
+        {!isDesktop && (
           <div
-            onClick={() => setSidebarCollapsed(true)}
+            onClick={() => {
+              setSidebarCollapsed(true);
+              if (isMobile) setNavHidden(true); // mobile: tap scrim → back to hamburger
+            }}
             className={isOverlay ? "overlay-scrim overlay-scrim--visible" : "overlay-scrim"}
           />
         )}
@@ -1071,18 +1085,21 @@ function App() {
         {/* ── OVERLAY SIDENAV — tablet + mobile ───────────────────────────── */}
         {/* Always rendered when !isDesktop so the CSS transition can slide it
             OUT when the overlay closes. The --open class drives enter/exit.
-            top/width are inline (dynamic: isNavDesktop ? 64 : 0, overlayNavW). */}
+            top:64 is correct for BOTH tablet (TopNav fixed) and mobile (TopNav
+            in-flow at 64px) — the overlay starts right below the TopNav in
+            both cases. width:overlayNavW is 250px at all overlay breakpoints. */}
         {!isDesktop && (
           <div
             className={isOverlay ? "overlay-panel overlay-panel--open" : "overlay-panel"}
-            style={{ top: isNavDesktop ? 64 : 0, width: overlayNavW }}>
+            style={{ top: 64, width: overlayNavW }}>
             <SideNav activeId={activeId} onNavigate={handleNavigate}
               sidebarCollapsed={false}
+              hideCollapseButton={isMobile}
               onCollapseChange={v => {
                 if (v) {
                   setSidebarCollapsed(true);
-                  // Mobile only: nav has two states — hidden (hamburger) or full overlay.
-                  // Pressing CollapseButton on mobile goes back to hidden, not 72px collapsed.
+                  // Mobile: pressing collapse goes back to hidden (hamburger ≡),
+                  // not to 72px collapsed rail (which doesn't exist on mobile).
                   if (isMobile) setNavHidden(true);
                 }
               }} />

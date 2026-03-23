@@ -156,7 +156,7 @@ Use the stroked variant when modules need an explicit visual boundary — for ex
 | Semantic Token | Primitive | Resolved Value | Used In |
 |---|---|---|---|
 | `Icon/Contextual/NavItem/Base` | — | `#4b4b4b` | Icon default + expanded-trail icon |
-| `Icon/Contextual/NavItem/Hover` | — | `#3b3b3b` | Icon hover |
+| `Icon/Contextual/NavItem/Hover` | — | `#363636` | Icon hover |
 | `Icon/Contextual/NavItem/Active` | — | `#3555a0` | Active icon + collapsed-trail icon + `indicator.stripe` color |
 
 > `Icon/Contextual/NavItem/Active` (`#3555a0`) is used for **three things simultaneously**: the leading icon, the indicator stripe, and the collapsed-trail icon. They share the same token.
@@ -771,7 +771,7 @@ A fifth value (>1900px) exists in the variables panel but is unused and unconfir
 |---|---|---|---|
 | ≥1024px Desktop | Expanded (250px) | **Push** — content shifts right | No |
 | 768px–1023px Tablet | Collapsed (72px) | **Overlay** — 250px panel floats above content, scrim behind | No |
-| <768px Mobile | **Hidden** (default) | **Full-width overlay** — slides over entire viewport width | Yes — hamburger/close in global top nav |
+| <768px Mobile | **Hidden** (default) | **Overlay (250px)** — same drawer width as tablet, scrim behind | Yes — hamburger/close in global top nav |
 
 **Key rules:**
 
@@ -779,7 +779,7 @@ A fifth value (>1900px) exists in the variables panel but is unused and unconfir
 
 **Tablet (768–1023px) — overlay, always visible:** SideNav is collapsed (72px) by default and always in-flow. User can expand it, which causes it to float as a 250px overlay above the page content (with a scrim behind). Collapsing returns it to the 72px in-flow rail. The nav cannot be hidden at tablet — only collapsed or expanded.
 
-**Mobile (<768px) — hidden by default:** The SideNav is fully hidden on initial load. The hamburger control in the global top nav reveals it as a full-width (100vw) overlay. Closing via the overlay's collapse button or top-nav close icon hides it again. **There is no 72px collapsed rail state on mobile** — the icon-only rail is unsuitable for touch screens (hover popovers don't apply) and consumes too much of a narrow viewport.
+**Mobile (<768px) — hidden by default:** The SideNav is fully hidden on initial load. The hamburger control in the global top nav reveals it as a **250px overlay** with a scrim (same width as tablet). Closing via the top-nav close icon or tapping the scrim hides it again. **There is no 72px collapsed rail state on mobile** — the icon-only rail is unsuitable for touch screens (hover popovers don't apply) and consumes too much of a narrow viewport. **There is no collapse button inside the mobile overlay** — the TopNav hamburger/close is the sole toggle.
 
 **Push vs overlay:** At ≥1024px, the SideNav is in the page's layout flow — it takes up width. Below 1024px, the SideNav floats as an overlay above the content — it does not shift the page. This is a page-shell concern, not a SideNav component property.
 
@@ -797,9 +797,9 @@ A fifth value (>1900px) exists in the variables panel but is unused and unconfir
 
 **Hidden — default at mobile:** The SideNav is fully hidden on load. The hamburger icon (≡) appears in the global top nav. **There is no 72px collapsed rail on mobile.** The icon-only rail pattern is not appropriate for touch-only screens: hover popovers don't trigger, icon-only navigation is ambiguous at phone scale, and 72px represents ~20% of a 390px viewport.
 
-**Full-width overlay — triggered at mobile:** Tapping the hamburger slides the SideNav in as a full-width (100vw) drawer covering the entire viewport. The global top nav shows the close icon (×). Tapping close, or pressing the SideNav's internal collapse button, fully hides the nav again (returns to hamburger ≡ state — does **not** stop at 72px collapsed).
+**250px overlay — triggered at mobile:** Tapping the hamburger slides the SideNav in as a 250px drawer with a scrim behind it. On a 393px phone this leaves 143px of dimmed content visible — enough for users to understand and tap outside to dismiss. The global top nav shows the close icon (×). Tapping the scrim or the close icon hides the nav (returns to hamburger ≡). The SideNav **does not show a collapse button** inside the mobile overlay — there is nothing to collapse to.
 
-**Overlay dismiss:** On tablet, tapping the scrim or the in-nav collapse button closes the overlay. On mobile, the top-nav hamburger/close toggle and the in-nav collapse button are the dismiss mechanisms. No swipe-to-dismiss gesture is specified.
+**Overlay dismiss:** On tablet, tapping the scrim or the in-nav collapse button closes the overlay. On mobile, the top-nav hamburger/close toggle or tapping the scrim are the dismiss mechanisms. No swipe-to-dismiss gesture is specified.
 
 ### 16.4 Global top nav (Unity Nav) — out of scope, Figma reference
 
@@ -809,7 +809,7 @@ For SideNav integration purposes only, the relevant behaviour is:
 
 **At ≥768px (desktop/tablet layout):** Full nav bar — app switcher, org switcher, search bar, icon buttons, avatar. No hamburger control. SideNav cannot be hidden at these sizes.
 
-**At <768px (mobile layout):** Simplified nav bar — hamburger/close toggle on the left, centred app icon, ellipsis and avatar on the right. Icon state: hamburger (≡) when the SideNav is hidden (default), close (×) when the full-width overlay is open. The toggle controls the hidden ↔ full-overlay transition only — there is no intermediate 72px collapsed state on mobile.
+**At <768px (mobile layout):** Simplified nav bar — hamburger/close toggle on the left, centred app icon, ellipsis and avatar on the right. Icon state: hamburger (≡) when the SideNav is hidden (default on load), close (×) when the 250px overlay is open. The toggle controls the hidden ↔ 250px-overlay transition only — there is no intermediate 72px collapsed state on mobile.
 
 This spec does not prescribe anything about the top nav's visual design, tokens, or other interactions. For all top nav specs, refer to the Figma link above.
 
@@ -887,8 +887,8 @@ A semi-transparent scrim is shown behind the SideNav whenever it is in expanded-
 
 **Breakpoint rules:**
 
-- **<768px (Mobile):** No scrim. The SideNav expands to full viewport width, covering the entire page — a scrim would be invisible and redundant.
-- **768px–1023px (Tablet):** Scrim shown. The SideNav is 250px wide; page content is visible to the right. The scrim signals that content is temporarily inaccessible.
+- **<768px (Mobile):** Scrim **shown**. The overlay is 250px wide, leaving page content visible to the right — the scrim dims that content and provides the tap-outside-to-dismiss affordance.
+- **768px–1023px (Tablet):** Scrim shown. Same 250px overlay width; same scrim behaviour.
 - **≥1024px:** No overlay mode; no scrim.
 
 **Interaction:** Tapping the scrim dismisses the SideNav overlay (returns to 72px collapsed rail). This is the standard mobile drawer tap-outside pattern. The in-nav collapse button is the alternative dismiss path.
