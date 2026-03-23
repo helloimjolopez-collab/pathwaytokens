@@ -997,29 +997,20 @@ See §6 state matrix, rule 2, and §7 for indicator stripe anatomy.
 
 ---
 
-### 17.7 Suggested Figma Make prompt template
-
-Copy this prompt into Figma Make after uploading both files:
+### 17.7 Figma Make prompt template
 
 ```
 Using SideNav-figmamake.html as the visual reference and SideNav-spec.md
 as the specification, implement the SideNav shell as Figma auto-layout frames.
+Implement both the TopNav and the SideNav together — they form a single shell.
 
-Always include both the TopNav and the SideNav — they form a single shell.
+Use these nav items, in order:
+[your list here — see §17.3 for format]
 
-Items (in order):
-[paste your items here using the format from §17.3]
+Use these icons:
+[your icon names and source, or attach SVG files]
 
-Implement these frames:
-1. TopNav (full-width, 64px tall)
-2. SideNav — Expanded (250px, first destination item active)
-3. SideNav — Collapsed (72px icon rail, same active item)
-4. SideNav — Grouper trail-collapsed (250px; grouper closed, its child is active —
-   grouper row must show Active-identical styling: blue stripe, blue icon, dark text,
-   active fill — see §17.6 and §6 of the spec)
-
-Replace all placeholder icons with [your icon set].
-Match all tokens, spacing, hover/active/trail states, and CollapseButton
-anatomy exactly as documented in spec §3–9.
+Match all spacing, colours, and states from the spec exactly.
+Output as a Figma auto-layout frame.
 ```
 
