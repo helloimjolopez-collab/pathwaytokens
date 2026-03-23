@@ -319,8 +319,19 @@ Collapsed: width  64px, padding 14px 12px (same, text hidden)
 
 ### 8.3 Transition
 ```
-width: transition 0.25s cubic-bezier(0.4, 0, 0.2, 1)
+width: transition 0.36s cubic-bezier(0.4, 0, 0.2, 1)
 ```
+
+**Label and chevron fade:** Item labels, chevrons, and the CollapseButton "Collapse" text are always present in the DOM. They fade out/in using `max-width` + `opacity` transitions so text does not pop-in at full opacity inside the still-narrow container during an expand animation.
+
+| Element | Collapsed value | Expanded value | Transition |
+|---|---|---|---|
+| Label `max-width` | `0` | `200px` | `0.32s cubic-bezier(0.4,0,0.2,1)` |
+| Label `opacity` | `0` | `1` | `0.18s ease` |
+| Chevron `max-width` | `0` | `40px` | `0.32s cubic-bezier(0.4,0,0.2,1)` |
+| Chevron `opacity` | `0` | `1` | `0.18s ease` |
+| CollapseButton label `max-width` | `0` | `120px` | `0.32s cubic-bezier(0.4,0,0.2,1)` |
+| CollapseButton label `opacity` | `0` | `1` | `0.18s ease` |
 
 ---
 
@@ -839,19 +850,29 @@ Pair this with a `state` property: `expanded` / `collapsed` / `hidden` to repres
 
 The overlay panel (`.overlay-panel`) uses CSS transitions rather than one-shot keyframe animations. The overlay container always remains in the DOM when `!isDesktop`, and `.overlay-panel--open` class is toggled to drive both the enter and exit transitions. This is intentional: keyframe animations only play on insertion; a CSS transition reverses smoothly when the class is removed, giving a proper exit without instant-removal flash.
 
+The overlay uses **asymmetric enter/exit transitions**: the enter curve is slower and more eased (300–380ms, deceleration) to feel intentional; the exit is snappier (220–300ms, acceleration) to stay out of the user's way. This is achieved by placing the exit `transition` on the base class and the enter `transition` on the `--open` modifier — CSS always uses the destination state's transition property.
+
 **Enter (`.overlay-panel--open` added):**
 
 | Property | Value |
 |---|---|
 | Transform | `translateX(-110%)` → `translateX(0)` — 110% hides any shadow bleed |
 | Opacity | `0` → `1` |
-| Transform duration | `280ms` |
-| Opacity duration | `200ms` (opacity settles before slide completes — intentional layering) |
-| Easing | `cubic-bezier(0.4, 0, 0.2, 1)` (Material standard) |
+| Transform duration | `380ms` |
+| Opacity duration | `300ms` |
+| Easing | `cubic-bezier(0, 0, 0.2, 1)` (deceleration — eases into resting position) |
 
-**Exit (`.overlay-panel--open` removed):** Same transition reverses — panel slides back left and fades out simultaneously over 280ms. No separate exit keyframe is needed.
+**Exit (`.overlay-panel--open` removed):**
 
-**Scrim (`.overlay-scrim`):** Opacity `0` → `1` on show, `1` → `0` on dismiss. `280ms`, same easing. `pointer-events: none` when invisible (no click-through).
+| Property | Value |
+|---|---|
+| Transform | `translateX(0)` → `translateX(-110%)` |
+| Opacity | `1` → `0` |
+| Transform duration | `300ms` |
+| Opacity duration | `220ms` |
+| Easing | `cubic-bezier(0.4, 0, 0.6, 1)` (acceleration — exits with intent) |
+
+**Scrim (`.overlay-scrim`):** Opacity `0` → `1` on show, `1` → `0` on dismiss. `280ms`, `cubic-bezier(0.4,0,0.2,1)`. `pointer-events: none` when invisible (no click-through).
 
 **Reduced motion (`prefers-reduced-motion: reduce`):** Transform is suppressed (`transform: none !important`). Only opacity fades remain, shortened to `150ms linear`.
 
@@ -860,11 +881,19 @@ The overlay panel (`.overlay-panel`) uses CSS transitions rather than one-shot k
   position: fixed; left: 0; bottom: 0; z-index: 100;
   transform: translateX(-110%);
   opacity: 0; pointer-events: none;
+  will-change: transform;
+  /* EXIT transition — fires when .overlay-panel--open class is removed */
   transition:
-    transform 280ms cubic-bezier(0.4, 0, 0.2, 1),
-    opacity   200ms cubic-bezier(0.4, 0, 0.2, 1);
+    transform 300ms cubic-bezier(0.4, 0, 0.6, 1),
+    opacity   220ms cubic-bezier(0.4, 0, 0.6, 1);
 }
-.overlay-panel--open { transform: translateX(0); opacity: 1; pointer-events: auto; }
+.overlay-panel--open {
+  transform: translateX(0); opacity: 1; pointer-events: auto;
+  /* ENTER transition — fires when .overlay-panel--open class is added */
+  transition:
+    transform 380ms cubic-bezier(0, 0, 0.2, 1),
+    opacity   300ms cubic-bezier(0, 0, 0.2, 1);
+}
 
 .overlay-scrim {
   position: fixed; top: 64px; left: 0; right: 0; bottom: 0;

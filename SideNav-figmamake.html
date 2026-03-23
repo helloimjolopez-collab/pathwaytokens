@@ -54,23 +54,35 @@
   /* ── RESPONSIVE LAYOUT ─────────────────────────────────────── */
   /* Overlay nav panel — always rendered when !isDesktop, CSS transitions
      drive both enter AND exit so there is no instant-removal flash.
-     Enter: transform 280ms + opacity 200ms (slide leads, fade trails).
-     Exit:  same transitions in reverse when --open class is removed.    */
+
+     Asymmetric curves: the transition defined on .overlay-panel fires on EXIT
+     (CSS uses the destination state's transition, so going back to the base
+     class uses the base class transition). The transition on .overlay-panel--open
+     fires on ENTER. This lets enter decelerate (glides in) and exit ease-in-out
+     (leaves cleanly without the sharp reverse-curve snap of a shared transition).
+
+     Enter: transform 380ms decelerate + opacity 300ms decelerate.
+     Exit:  transform 300ms ease-in-out + opacity 220ms ease-in-out.           */
   .overlay-panel {
     position: fixed; left: 0; bottom: 0; z-index: 100;
     /* top:64 / width:overlayNavW(250) set via inline style (see App render)   */
-    transform: translateX(-110%);   /* 110% hides any box-shadow bleed      */
+    transform: translateX(-110%);   /* 110% hides any box-shadow bleed         */
     opacity: 0;
-    pointer-events: none;           /* non-visible panel must not eat clicks */
+    pointer-events: none;           /* non-visible panel must not eat clicks    */
+    /* EXIT transition — fires when .overlay-panel--open class is removed       */
     transition:
-      transform 280ms cubic-bezier(0.4, 0, 0.2, 1),
-      opacity   200ms cubic-bezier(0.4, 0, 0.2, 1);
+      transform 300ms cubic-bezier(0.4, 0, 0.6, 1),
+      opacity   220ms cubic-bezier(0.4, 0, 0.6, 1);
     will-change: transform;
   }
   .overlay-panel--open {
     transform: translateX(0);
     opacity: 1;
     pointer-events: auto;
+    /* ENTER transition — fires when .overlay-panel--open class is added        */
+    transition:
+      transform 380ms cubic-bezier(0, 0, 0.2, 1),
+      opacity   300ms cubic-bezier(0, 0, 0.2, 1);
   }
 
   /* Scrim — all overlay breakpoints (<1024px, both tablet AND mobile).
@@ -401,24 +413,35 @@ function SideNavItem({ item, isActive, isTrail, isExpanded, isSidebarCollapsed,
 
         {/* text.label — Label/Menu/Large/Medium (16px/500/22px) at ALL levels */}
         {/* L1: paddingLeft=32 = Container.rowStart px-[8] + container.main pl-[24] */}
-        {!isSidebarCollapsed && (
-          <div style={{ flex:1, minWidth:0,
-            paddingLeft:  isChild ? 32 : L.textPad,
-            paddingRight: (!isChild && hasChildren) ? 0 : L.rowPadH }}>
-            <p style={{ fontFamily:"'Red Hat Text',sans-serif", fontWeight:500,
-              fontSize:16, lineHeight:"22px", color:textColor, margin:0,
-              whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
-              transition:"color 0.15s ease" }}>
-              {item.label}
-            </p>
-          </div>
-        )}
+        {/* Always in DOM; maxWidth+opacity transition prevents label pop-in glitch
+            when expanding — text was previously mounting at full opacity inside the
+            still-72px container before the width transition completed. */}
+        <div style={{ flex:1, minWidth:0,
+          paddingLeft:  isChild ? 32 : L.textPad,
+          paddingRight: (!isChild && hasChildren) ? 0 : L.rowPadH,
+          maxWidth: isSidebarCollapsed ? 0 : 200,
+          opacity:  isSidebarCollapsed ? 0 : 1,
+          overflow: "hidden",
+          pointerEvents: isSidebarCollapsed ? "none" : "auto",
+          transition:"max-width 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.18s ease" }}>
+          <p style={{ fontFamily:"'Red Hat Text',sans-serif", fontWeight:500,
+            fontSize:16, lineHeight:"22px", color:textColor, margin:0,
+            whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
+            transition:"color 0.15s ease" }}>
+            {item.label}
+          </p>
+        </div>
 
         {/* Container.RowEnd 40×24 — groupers only, expanded sidebar */}
         {/* Chevron: ▼ when collapsed, ▲ when expanded (vertical, not horizontal) */}
-        {!isSidebarCollapsed && !isChild && hasChildren && (
+        {/* Always in DOM with same fade-out treatment to prevent layout jank */}
+        {!isChild && hasChildren && (
           <div style={{ width:40, height:L.iconWrap, display:"flex",
-            alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+            alignItems:"center", justifyContent:"center", flexShrink:0,
+            maxWidth: isSidebarCollapsed ? 0 : 40,
+            opacity:  isSidebarCollapsed ? 0 : 1,
+            overflow: "hidden",
+            transition:"max-width 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.18s ease" }}>
             <ChevComp size={10} color={iconColor} />
           </div>
         )}
@@ -592,12 +615,16 @@ function CollapseButton({ isSidebarCollapsed, onToggle }) {
               alignItems:"center", justifyContent:"center", flexShrink:0 }}>
               <IconImg name={isSidebarCollapsed ? "expand" : "collapse"} size={18} color={colIconColor} />
             </div>
-            {!isSidebarCollapsed && (
-              <span style={{ paddingLeft:L.textPad, paddingRight:L.textPad,
-                fontFamily:"'Red Hat Text',sans-serif", fontWeight:500, fontSize:16,
-                lineHeight:"22px", color: h ? T.text.navHover : T.text.navBase,
-                transition:"color 0.15s ease" }}>Collapse</span>
-            )}
+            {/* Always rendered — fades/shrinks out when collapsed so text doesn't
+                pop in before the width transition completes on expand */}
+            <span style={{ paddingLeft:L.textPad, paddingRight:L.textPad,
+              fontFamily:"'Red Hat Text',sans-serif", fontWeight:500, fontSize:16,
+              lineHeight:"22px", color: h ? T.text.navHover : T.text.navBase,
+              transition:"color 0.15s ease, max-width 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.18s ease",
+              maxWidth: isSidebarCollapsed ? 0 : 120,
+              opacity:  isSidebarCollapsed ? 0 : 1,
+              overflow: "hidden", whiteSpace: "nowrap",
+              pointerEvents: isSidebarCollapsed ? "none" : "auto" }}>Collapse</span>
           </div>
         </div>
       </div>
@@ -657,7 +684,7 @@ function SideNav({ activeId, onNavigate, sidebarCollapsed, onCollapseChange, hid
       // Padding: px-[12px] py-[14px] — no spacing tokens in Figma
       padding:`${L.navPadV}px ${L.navPadH}px`,
       boxSizing:"border-box", flexShrink:0,
-      transition:"width 0.25s cubic-bezier(0.4,0,0.2,1)",
+      transition:"width 0.36s cubic-bezier(0.4,0,0.2,1)",
       // stroke/static/info/subtle = Fill/Static/Info/Subtle
       // Border-width/xs token = 0.5px (Figma: --border-width/xs)
       borderRight:`0.5px solid ${T.fill.infoSubtle}`,
