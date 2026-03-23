@@ -73,8 +73,11 @@
     pointer-events: auto;
   }
 
-  /* Scrim — tablet overlay only (768–1023px). Always rendered on tablet so the
-     fade-out plays when overlay closes instead of the element just vanishing.  */
+  /* Scrim — all overlay breakpoints (<1024px, both tablet AND mobile).
+     Overlay is 250px wide at all sizes, so page content is always partially
+     visible behind it and the scrim is always needed. Always rendered when
+     !isDesktop (not gated on isOverlay) so the CSS fade-out plays on dismiss —
+     removing from the DOM on close would cause an instant vanish.             */
   .overlay-scrim {
     position: fixed; top: 64px; left: 0; right: 0; bottom: 0;
     background: rgba(0,0,0,0.32); z-index: 99;
@@ -607,6 +610,15 @@ function CollapseButton({ isSidebarCollapsed, onToggle }) {
 // Padding: px-[12px] py-[14px] (no semantic tokens — Figma gap)
 // Width: 250px expanded, 72px collapsed — Figma: 72px (12px padding × 2 + 48px item)
 // Border-right: 0.5px (--border-width/xs) solid Fill/Static/Info/Subtle (#edf0f9)
+//
+// Props:
+//   activeId          — id of the currently active nav item
+//   onNavigate        — called with item id when user navigates
+//   sidebarCollapsed  — true = 72px icon-only rail; false = 250px expanded
+//   onCollapseChange  — called with new boolean value when collapse state changes
+//   hideCollapseButton— when true, the Collapse_Expand_Nav_Container is not rendered.
+//                       Set to true on mobile (<768px) where there is no 72px rail
+//                       state — the TopNav hamburger/close is the sole toggle.
 function SideNav({ activeId, onNavigate, sidebarCollapsed, onCollapseChange, hideCollapseButton }) {
   const setSidebarCollapsed = onCollapseChange;
   const [expanded, setExpanded] = useState({ view: true });
@@ -964,7 +976,7 @@ function TopNav({ isNavDesktop, navHidden, onHamburgerClick }) {
 //
 //  <768px   MOBILE    hidden + full overlay
 //                                    SideNav hidden by default (hamburger icon in TopNav)
-//                                    Opening → full-width (100vw) overlay drawer
+//                                    Opening → 250px overlay drawer (same width as tablet)
 //                                    NO 72px collapsed state on mobile (hover/popover patterns
 //                                    don't apply to touch devices; screen width too narrow)
 //                                    TopNav: position:relative (in-flow, not fixed)
