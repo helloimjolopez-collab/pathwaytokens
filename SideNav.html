@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SideNav — Pathway Design System</title>
-<link href="https://fonts.googleapis.com/css2?family=Red+Hat+Text:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Red+Hat+Text:wght@400;500;600;700&Red+Hat+Display:wght@600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
@@ -41,12 +41,39 @@
       to   { opacity: 1; transform: translateY(-50%); }
     }
   }
+
+  /* ── TOP NAV ───────────────────────────────────────────────── */
+  /* Brand Colors/Dark Cerulean — Figma token */
+  .unity-nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 64px; background: #0f3e80; z-index: 200;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px 0 8px; box-sizing: border-box;
+  }
+
+  /* ── RESPONSIVE LAYOUT ─────────────────────────────────────── */
+  /* Nav overlay — slides in from left                           */
+  @keyframes navSlideIn {
+    from { transform: translateX(-100%); opacity: 0; }
+    to   { transform: translateX(0);     opacity: 1; }
+  }
+  /* Scrim — fades in (tablet overlay only)                      */
+  @keyframes scrimIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    @keyframes navSlideIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+  }
 </style>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState, useRef } = React;
+const { useState, useRef, useEffect } = React;
 
 // ─── DESIGN TOKENS ────────────────────────────────────────────────────────────
 // Semantic token → (Primitive: not exposed by get_variable_defs — tool resolves
@@ -257,17 +284,22 @@ function IndicatorStripe({ visible }) {
 // Level 0: [indicator 4px][LeadingIcon 24px][label flex][RowEnd 40×24 — groupers]
 // Level 1: [indicator 4px][label flex pl-32]  (no icon, pl = rowStart 8 + main 24)
 function SideNavItem({ item, isActive, isTrail, isExpanded, isSidebarCollapsed,
-  isChild, onClick, onToggle, popoverOpen, anchorRect, onPopoverEnter, onPopoverLeave }) {
+  isChild, onClick, onToggle, popoverOpen, anchorRect, onPopoverEnter, onPopoverLeave, activeId }) {
 
   const [hovered, setHovered] = useState(false);
   const hasChildren = !!(item.children && item.children.length);
 
   // Any expanded grouper → Trail state (regardless of active child)
   const isExpandedGrouper = hasChildren && isExpanded && !isSidebarCollapsed;
-  // Collapsed grouper with active child → Active state + stripe
+  // Collapsed grouper whose CHILD is active → trail state (bg fill + stripe)
   const isCollapsedActiveGrouper = isTrail && (!isExpanded || isSidebarCollapsed);
 
-  const showStripe  = isActive || isCollapsedActiveGrouper;
+  // Stripe rules (Figma):
+  //   Destination item active                       → stripe ✓
+  //   Collapsed GROUPER directly active             → NO stripe (fill + icon colour only)
+  //   Collapsed grouper with active child (trail)   → stripe ✓
+  const isCollapsedGrouper = isSidebarCollapsed && hasChildren;
+  const showStripe = isCollapsedActiveGrouper || (isActive && !isCollapsedGrouper);
 
   const fillBg =
     (isActive || isCollapsedActiveGrouper) ? T.fill.navActive
@@ -377,6 +409,7 @@ function SideNavItem({ item, isActive, isTrail, isExpanded, isSidebarCollapsed,
       {/* Rendered via portal so it escapes the nav's overflow:hidden stacking context */}
       {isSidebarCollapsed && hasChildren && popoverOpen && anchorRect && (
         <CollapsedPopover item={item} onClick={onClick} anchorRect={anchorRect}
+          activeId={activeId}
           onMouseEnter={() => {
             const rect = itemRef.current ? itemRef.current.getBoundingClientRect() : anchorRect;
             onPopoverEnter && onPopoverEnter(item.id, rect);
@@ -440,7 +473,7 @@ function CollapsedTooltip({ label, anchorRect, onMouseEnter, onMouseLeave }) {
 // Section label: Label/Menu/Base/Regular (14px/400/20px), #6b6b6b, bottom border
 // Items: Text/Body/S/Regular (14px/400/20px), Text/Contextual/NavItem/Base (#4b4b4b)
 // Offset: 8px from container right edge (bridge covers gap — see above)
-function CollapsedPopover({ item, onClick, anchorRect, onMouseEnter, onMouseLeave }) {
+function CollapsedPopover({ item, onClick, anchorRect, onMouseEnter, onMouseLeave, activeId }) {
   if (!anchorRect) return null;
   const top = anchorRect.top;
   const left = anchorRect.right + 8;
@@ -469,24 +502,34 @@ function CollapsedPopover({ item, onClick, anchorRect, onMouseEnter, onMouseLeav
       </div>
 
       {/* PopoverMenu.Items */}
-      {item.children.map(child => <PopoverRow key={child.id} item={child} onClick={onClick} />)}
+      {item.children.map(child => <PopoverRow key={child.id} item={child} onClick={onClick} activeId={activeId} />)}
     </div>,
     document.body
   );
 }
 
-function PopoverRow({ item, onClick }) {
+function PopoverRow({ item, onClick, activeId }) {
   const [h, setH] = useState(false);
+  const isActive = item.id === activeId;
+  // Active: fill navActive + stripe + text navActive color
+  // Hover: fill navHover + text navHover
+  // Base: transparent fill + text navBase
+  const bg    = isActive ? T.fill.navActive : h ? T.fill.navHover : "transparent";
+  const color = isActive ? T.text.navActive : h ? T.text.navHover : T.text.navBase;
   return (
     <div onClick={() => onClick(item.id)}
       onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
       style={{ display:"flex", alignItems:"center",
-        minHeight:40, padding:"4px 12px", borderRadius:8,
-        backgroundColor: h ? T.fill.navHover : "transparent",
-        cursor:"pointer", transition:"background-color 0.15s ease" }}>
-      <span style={{ fontFamily:"'Red Hat Text',sans-serif", fontWeight:400,
+        minHeight:40, borderRadius:8, overflow:"hidden",
+        backgroundColor: bg, cursor:"pointer",
+        transition:"background-color 0.15s ease" }}>
+      {/* 4px indicator stripe — matches SideNavItem stripe */}
+      <div style={{ width:4, alignSelf:"stretch", borderRadius:"0 4px 4px 0",
+        backgroundColor: isActive ? T.indicator : "transparent",
+        flexShrink:0, transition:"background-color 0.15s ease" }} />
+      <span style={{ padding:"0 8px", fontFamily:"'Red Hat Text',sans-serif", fontWeight:400,
         fontSize:14, lineHeight:"20px", letterSpacing:"0.02px",
-        color: h ? T.text.navHover : T.text.navBase, transition:"color 0.15s ease" }}>
+        color, transition:"color 0.15s ease", flex:1 }}>
         {item.label}
       </span>
     </div>
@@ -535,8 +578,8 @@ function CollapseButton({ isSidebarCollapsed, onToggle }) {
 // Padding: px-[12px] py-[14px] (no semantic tokens — Figma gap)
 // Width: 250px expanded, 72px collapsed — Figma: 72px (12px padding × 2 + 48px item)
 // Border-right: 0.5px (--border-width/xs) solid Fill/Static/Info/Subtle (#edf0f9)
-function SideNav({ activeId, onNavigate }) {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+function SideNav({ activeId, onNavigate, sidebarCollapsed, onCollapseChange }) {
+  const setSidebarCollapsed = onCollapseChange;
   const [expanded, setExpanded] = useState({ view: true });
   const [popoverId, setPopoverId] = useState(null);
   const [popoverRect, setPopoverRect] = useState(null);
@@ -562,7 +605,11 @@ function SideNav({ activeId, onNavigate }) {
     <nav style={{
       // Width tokens: none in Figma — raw values
       width: sidebarCollapsed ? L.navWcol : L.navW,
-      minHeight:"100vh",
+      // height:100% fills the body area (viewport − 64px topnav) exactly.
+      // minHeight:100vh was causing the nav to overflow its container and the
+      // CollapseButton — positioned at the flex-column bottom — to be clipped
+      // by the parent's overflow:hidden.
+      height:"100%",
       // Surface/Nav/Light
       backgroundColor: T.surface.navLight,
       display:"flex", flexDirection:"column",
@@ -589,7 +636,8 @@ function SideNav({ activeId, onNavigate }) {
                 isChild={false} onClick={onNavigate} onToggle={toggleExpand}
                 popoverOpen={popoverId === item.id}
                 anchorRect={popoverId === item.id ? popoverRect : null}
-                onPopoverEnter={onPopoverEnter} onPopoverLeave={onPopoverLeave} />
+                onPopoverEnter={onPopoverEnter} onPopoverLeave={onPopoverLeave}
+                activeId={activeId} />
 
               {/* Level 1 children — visible only when grouper expanded + sidebar expanded */}
               {hasChildren && isExpanded && !sidebarCollapsed && (
@@ -612,7 +660,7 @@ function SideNav({ activeId, onNavigate }) {
         {/* Collapse_Expand_Nav_Container: pt-[4px] gap-[4px] */}
         <div style={{ paddingTop:L.collapseGap }}>
           <CollapseButton isSidebarCollapsed={sidebarCollapsed}
-            onToggle={() => setSidebarCollapsed(v => !v)} />
+            onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
         </div>
       </div>
     </nav>
@@ -675,23 +723,331 @@ const WRN = () => (
   </svg>
 );
 
+// ─── TOP NAV ──────────────────────────────────────────────────────────────────
+// Figma: Unity Nav — Module=ChMS (desktop) / Module=Hamburger (mobile)
+// Background: Brand Colors/Dark Cerulean (#0f3e80), height 64px
+// Desktop: App switcher + Org switcher + Search | Icon buttons + Avatar
+// ─── GLOBAL TOP NAV ──────────────────────────────────────────────────────────
+// Figma component: Global Navigation (Accounting module) — node 40005504:55994
+// Full component specs: see §16.4 of the spec and the Figma Global Navigation page.
+//
+// Desktop/Tablet (≥768px): [Accounting icon + label + chevron] [Org logo + chevron] | [icons] [avatar]
+//   No search bar — Accounting module uses HeaderSearch state="Off" (not visible).
+// Mobile (<768px): [Hamburger/Close at left:8] [App icon + chevron at left:57] [ellipsis at right:65] [avatar at right:13]
+//   Hamburger (≡) when nav hidden; Close (×) when nav visible (any state).
+//   App Switcher is NOT centred — it sits immediately to the right of the hamburger.
+function TopNav({ isNavDesktop, navHidden, onHamburgerClick }) {
+
+  // ── Inline SVG assets (inlined to avoid file-path dependency) ──────────────
+  const IcoAmplify = ({ size=32 }) => (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+      <path d="M19.1158 13.2962H28.5872C29.7477 13.2962 30.6682 12.2558 30.4814 11.1087C29.5476 5.42637 25.0788 0.944546 19.396 0.0241718C18.2488 -0.162571 17.2083 0.757803 17.2083 1.91828V11.3888C17.2083 12.4426 18.062 13.2962 19.1158 13.2962Z" fill="white"/>
+      <path d="M15.4208 17.4986C14.6471 16.725 14.2069 15.6579 14.2069 14.5641V4.89351C14.2069 3.73304 13.1797 2.826 12.0325 3.01274C5.14913 4.1332 0.0133595 10.4691 0.840428 17.8454C0.907127 18.4724 1.04046 19.0859 1.1872 19.6862C2.45448 18.8458 3.96194 18.3523 5.5894 18.3523C9.9782 18.3523 13.5399 21.9138 13.5399 26.3022C13.5399 27.5027 13.2597 28.6498 12.7795 29.6769C12.7928 29.6769 12.8196 29.6769 12.8329 29.6769C16.2746 30.0104 19.4761 29.0633 22.024 27.2493C22.9845 26.569 23.0779 25.1684 22.2375 24.3281L15.4208 17.512V17.4986Z" fill="white"/>
+      <path d="M30.0946 16.2832H23.2779C21.5837 16.2832 20.7434 18.324 21.9306 19.5245L26.7596 24.3531C27.5734 25.1668 28.9473 25.0868 29.6143 24.1531C30.8015 22.4991 31.6286 20.5516 31.9755 18.4574C32.1622 17.3103 31.2552 16.2832 30.0946 16.2832Z" fill="white"/>
+      <path d="M5.60266 20.6735C4.242 20.6735 3.00142 21.1804 2.04095 21.9807C0.800347 23.0078 0 24.5417 0 26.2758C0 29.3704 2.50783 31.8914 5.61601 31.8914C7.65701 31.8914 9.4179 30.7976 10.405 29.1703C10.912 28.3299 11.2321 27.3429 11.2321 26.2758C11.2321 23.1812 8.72419 20.6602 5.61601 20.6602L5.60266 20.6735Z" fill="white"/>
+    </svg>
+  );
+
+  const IcoGraceFellowship = () => (
+    <svg width="120" height="32" viewBox="0 0 120 32" fill="none">
+      <path d="M14.5718 0C22.6192 0.00011113 29.1429 7.01308 29.1431 15.6641C29.1431 24.3152 22.6193 31.329 14.5718 31.3291C13.8649 31.3291 13.1697 31.2735 12.4897 31.1689V17.4326L22.564 15.5449C22.8678 15.488 23.0202 15.4596 23.1343 15.3809C23.2346 15.3115 23.3143 15.2153 23.3638 15.1035C23.4199 14.9764 23.4194 14.8203 23.4194 14.5098V10.1748C23.4194 9.75822 23.4197 9.54968 23.3354 9.40332C23.2615 9.27501 23.1446 9.1781 23.0054 9.12891C22.8465 9.07288 22.6418 9.11116 22.2339 9.18848L12.4897 11.0352V4.84375C12.4897 4.41129 12.4899 4.19458 12.4009 4.04395C12.3228 3.91201 12.1995 3.81266 12.0542 3.76367C11.8885 3.70788 11.677 3.75235 11.2544 3.8418L7.47314 4.64258C7.18409 4.70376 7.03924 4.73396 6.93115 4.81055C6.83588 4.87816 6.76085 4.97095 6.71436 5.07812C6.66168 5.19976 6.66162 5.34796 6.66162 5.64355V12.1396L0.155762 13.373C1.18724 5.80807 7.24824 0 14.5718 0ZM6.66162 28.8213C3.66267 26.7334 1.423 23.4933 0.484863 19.6836L6.66162 18.5254V28.8213Z" fill="white"/>
+      <path fillRule="evenodd" clipRule="evenodd" d="M38.2541 28.2086V31.3287H37.4695V24.1678H42.4654V24.9146H38.2541V27.4721H42.0185V28.2086H38.2541ZM50.792 30.5921V31.3287H45.796V24.1678H50.7431V24.9044H46.5684V27.3493H50.3031V28.0858H46.5684V30.5921H50.792ZM58.2859 31.3287V30.5819H54.8179V24.1678H54.1226V31.3287H58.2859ZM65.7798 30.5819V31.3287H61.6165V24.1678H62.3118V30.5819H65.7798ZM72.4317 31.3287C72.9293 31.3287 73.3833 31.2314 73.7938 31.0369C74.2043 30.8424 74.5557 30.5819 74.848 30.2555C75.1404 29.9292 75.3674 29.5484 75.5291 29.1132C75.6908 28.678 75.7717 28.223 75.7717 27.7483V27.7285C75.7717 27.2537 75.6924 26.8004 75.5337 26.3685C75.3751 25.9366 75.1497 25.5575 74.8574 25.2311C74.565 24.9047 74.2152 24.6459 73.8078 24.4547C73.4004 24.2635 72.9479 24.1678 72.4504 24.1678C71.9528 24.1678 71.4988 24.2651 71.0883 24.4596C70.6778 24.6541 70.3263 24.9146 70.034 25.241C69.7417 25.5674 69.5147 25.9482 69.353 26.3834C69.1913 26.8185 69.1104 27.2735 69.1104 27.7483V27.768C69.1104 28.2428 69.1897 28.6961 69.3483 29.128C69.5069 29.5599 69.7324 29.939 70.0247 30.2654C70.317 30.5918 70.6669 30.8506 71.0743 31.0419C71.4816 31.2331 71.9341 31.3287 72.4317 31.3287ZM71.4464 30.2199C71.7522 30.3623 72.0868 30.4336 72.4501 30.4336C72.8135 30.4336 73.148 30.3639 73.4538 30.2245C73.7597 30.0851 74.0216 29.8947 74.2396 29.6531C74.4576 29.4115 74.6286 29.1296 74.7528 28.8075C74.8769 28.4854 74.939 28.1385 74.939 27.7668V27.7483C74.939 27.3766 74.8769 27.0282 74.7528 26.7029C74.6286 26.3777 74.4545 26.0943 74.2305 25.8527C74.0064 25.6112 73.7415 25.4191 73.4357 25.2767C73.1299 25.1342 72.7953 25.063 72.4319 25.063C72.0686 25.063 71.734 25.1326 71.4282 25.272C71.1224 25.4114 70.8605 25.6019 70.6425 25.8435C70.4245 26.085 70.2534 26.3669 70.1293 26.689C70.0051 27.0111 69.9431 27.358 69.9431 27.7297V27.7483C69.9431 28.1199 70.0051 28.4684 70.1293 28.7936C70.2534 29.1188 70.4275 29.4022 70.6516 29.6438C70.8756 29.8854 71.1406 30.0774 71.4464 30.2199ZM81.9454 31.3287L83.6819 25.5757L85.4094 31.3287H86.0122L88.2615 24.1881H87.5147L85.7153 30.093L83.9878 24.1678H83.403L81.6755 30.093L79.876 24.1881H79.1023L81.3516 31.3287H81.9454ZM94.3946 31.1894C94.1155 31.2823 93.8109 31.3287 93.4811 31.3287C92.9482 31.3287 92.4612 31.2375 92.0203 31.0552C91.5794 30.8728 91.1591 30.5927 90.7595 30.2148L91.2257 29.6379C91.5747 29.9695 91.9268 30.2164 92.282 30.3789C92.6373 30.5413 93.0465 30.6225 93.5096 30.6225C93.96 30.6225 94.3201 30.5115 94.5897 30.2894C94.8593 30.0673 94.9941 29.7838 94.9941 29.439V29.4191C94.9941 29.26 94.9687 29.1158 94.918 28.9865C94.8672 28.8572 94.7784 28.7395 94.6515 28.6334C94.5246 28.5273 94.3486 28.4312 94.1234 28.345C93.8982 28.2588 93.6111 28.1759 93.2622 28.0964C92.8815 28.0102 92.5501 27.9107 92.2678 27.798C91.9854 27.6853 91.7523 27.5494 91.5683 27.3902C91.3843 27.2311 91.2479 27.0454 91.1591 26.8333C91.0703 26.6211 91.0259 26.3725 91.0259 26.0873V26.0675C91.0259 25.7956 91.0798 25.5437 91.1877 25.3116C91.2955 25.0795 91.4478 24.879 91.6445 24.7099C91.8411 24.5408 92.0727 24.4082 92.3391 24.3121C92.6056 24.2159 92.8974 24.1678 93.2146 24.1678C93.7031 24.1678 94.1297 24.2391 94.4945 24.3817C94.8593 24.5242 95.213 24.7381 95.5556 25.0232L95.1178 25.6299C94.807 25.3646 94.4945 25.1724 94.1805 25.053C93.8665 24.9337 93.5381 24.874 93.1956 24.874C92.7578 24.874 92.4121 24.9817 92.1583 25.1972C91.9046 25.4127 91.7777 25.6796 91.7777 25.9978V26.0177C91.7777 26.1835 91.8031 26.331 91.8538 26.4603C91.9046 26.5896 91.9965 26.7089 92.1298 26.8184C92.263 26.9278 92.447 27.0272 92.6817 27.1167C92.9164 27.2062 93.2178 27.2908 93.5857 27.3703C94.328 27.5427 94.8752 27.7814 95.2272 28.0864C95.5793 28.3914 95.7554 28.8091 95.7554 29.3396V29.3595C95.7554 29.6578 95.6983 29.928 95.5841 30.17C95.4699 30.412 95.3129 30.6192 95.1131 30.7916C94.9132 30.964 94.6737 31.0966 94.3946 31.1894ZM99.7883 31.3287V28.1063H103.38V31.3287H104.082V24.1678H103.38V27.3493H99.7883V24.1678H99.086V31.3287H99.7883ZM108.99 24.1678V31.3287H108.333V24.1678H108.99ZM113.994 31.3287V28.8019H115.615C115.971 28.8019 116.308 28.7525 116.626 28.6536C116.944 28.5547 117.222 28.4064 117.46 28.2086C117.698 28.0108 117.888 27.767 118.027 27.4772C118.167 27.1873 118.237 26.848 118.237 26.4593V26.4389C118.237 26.0842 118.178 25.7671 118.061 25.4875C117.943 25.2079 117.775 24.9709 117.555 24.7765C117.336 24.5822 117.072 24.4321 116.764 24.3264C116.456 24.2207 116.114 24.1678 115.739 24.1678H113.241V31.3287H113.994ZM114.074 27.7483H115.652C115.914 27.7483 116.153 27.7163 116.369 27.6524C116.585 27.5884 116.77 27.4969 116.925 27.3777C117.081 27.2586 117.199 27.1176 117.281 26.9549C117.363 26.7921 117.404 26.609 117.404 26.4056V26.3882C117.404 25.9522 117.248 25.6224 116.935 25.3986C116.621 25.1748 116.206 25.063 115.689 25.063H114.074V27.7483Z" fill="white"/>
+      <path fillRule="evenodd" clipRule="evenodd" d="M43.2298 19.098C44.722 19.098 46.047 18.8264 47.2049 18.2834C48.3629 17.7404 49.3615 17.0846 50.2008 16.316V8.69684H43.1133V12.0302H46.727V14.5365C45.81 15.2383 44.6831 15.5891 43.3464 15.5891C42.6159 15.5891 41.9514 15.4513 41.353 15.1756C40.7546 14.8999 40.2339 14.5114 39.791 14.0102C39.348 13.5089 39.006 12.9199 38.7651 12.2432C38.5242 11.5665 38.4038 10.8272 38.4038 10.0252V9.97505C38.4038 9.22316 38.5242 8.51722 38.7651 7.85723C39.006 7.19724 39.3402 6.62079 39.7676 6.12789C40.1951 5.63498 40.6925 5.24233 41.2598 4.94993C41.8271 4.65753 42.4371 4.51133 43.0899 4.51133C43.5562 4.51133 43.9837 4.5531 44.3722 4.63664C44.7608 4.72019 45.1222 4.83715 45.4564 4.98753C45.7905 5.1379 46.113 5.3217 46.4239 5.53891C46.7348 5.75612 47.0456 6.00675 47.3565 6.2908L49.618 3.35843C49.1983 2.97414 48.7631 2.63161 48.3124 2.33085C47.8616 2.0301 47.3798 1.77947 46.8669 1.57897C46.354 1.37846 45.7983 1.22391 45.1999 1.1153C44.6015 1.0067 43.937 0.952393 43.2065 0.952393C41.9631 0.952393 40.8207 1.19049 39.7793 1.66669C38.7379 2.14288 37.8364 2.79452 37.0748 3.6216C36.3132 4.44867 35.7187 5.40942 35.2913 6.50383C34.8639 7.59825 34.6501 8.77203 34.6501 10.0252V10.0753C34.6501 11.3786 34.86 12.5816 35.2796 13.6844C35.6993 14.7871 36.286 15.7395 37.0399 16.5415C37.7937 17.3436 38.6952 17.9701 39.7443 18.4213C40.7935 18.8724 41.9553 19.098 43.2298 19.098ZM57.2418 18.7972V13.1831H60.0628L63.56 18.7972H67.7565L63.7698 12.5315C64.8112 12.1138 65.6544 11.4579 66.2994 10.564C66.9444 9.67012 67.2669 8.51305 67.2669 7.09281V7.04269C67.2669 5.37182 66.8007 4.03513 65.8681 3.03262C64.7645 1.8463 63.1792 1.25315 61.1119 1.25315H53.6514V18.7972H57.2418ZM57.2418 9.77455H60.8788C61.7648 9.77455 62.4448 9.54898 62.9188 9.09785C63.3929 8.64672 63.6299 8.0452 63.6299 7.29332V7.24319C63.6299 6.40776 63.3812 5.78119 62.8838 5.36347C62.3865 4.94575 61.6948 4.7369 60.8089 4.7369H57.2418V9.77455ZM72.7691 18.7972L74.2612 14.8623H81.1623L82.6544 18.7972H86.408L79.4137 1.12783H76.1031L69.1088 18.7972H72.7691ZM77.7118 5.76448L75.5435 11.4538H79.88L77.7118 5.76448ZM96.5731 19.098C97.3658 19.098 98.0808 19.0269 98.718 18.8849C99.3553 18.7429 99.942 18.534 100.478 18.2584C101.014 17.9827 101.508 17.6527 101.959 17.2684C102.409 16.8841 102.845 16.4496 103.264 15.9651L100.98 13.4839C100.342 14.1188 99.7011 14.62 99.0561 14.9876C98.411 15.3552 97.6222 15.539 96.6897 15.539C95.9902 15.539 95.3491 15.3928 94.7662 15.1004C94.1834 14.808 93.686 14.4112 93.2741 13.9099C92.8622 13.4087 92.5397 12.8239 92.3066 12.1555C92.0734 11.4872 91.9569 10.7771 91.9569 10.0252V9.97505C91.9569 9.22316 92.0734 8.51722 92.3066 7.85723C92.5397 7.19724 92.8661 6.61662 93.2858 6.11536C93.7054 5.6141 94.2067 5.22145 94.7896 4.9374C95.3724 4.65335 96.0058 4.51133 96.6897 4.51133C97.5134 4.51133 98.2556 4.68677 98.9162 5.03765C99.5768 5.38853 100.226 5.87308 100.863 6.4913L103.148 3.65919C102.775 3.25818 102.371 2.89059 101.935 2.55642C101.5 2.22225 101.026 1.9382 100.513 1.70428C100 1.47036 99.4291 1.28657 98.7996 1.1529C98.1701 1.01923 97.4746 0.952393 96.713 0.952393C95.454 0.952393 94.3038 1.19049 93.2625 1.66669C92.2211 2.14288 91.3274 2.79452 90.5813 3.6216C89.8352 4.44867 89.2524 5.40942 88.8327 6.50383C88.4131 7.59825 88.2032 8.77203 88.2032 10.0252V10.0753C88.2032 11.3284 88.4131 12.5064 88.8327 13.6092C89.2524 14.7119 89.8352 15.6685 90.5813 16.4789C91.3274 17.2893 92.2133 17.9284 93.2391 18.3962C94.265 18.864 95.3763 19.098 96.5731 19.098ZM118.559 15.3636V18.7972H106.132V1.25315H118.442V4.68677H109.699V8.24571H117.393V11.6793H109.699V15.3636H118.559Z" fill="white"/>
+    </svg>
+  );
+
+  const btnReset = {
+    border:"none", background:"transparent", cursor:"pointer",
+    padding:0, display:"flex", alignItems:"center", justifyContent:"center",
+    WebkitAppearance:"none", MozAppearance:"none", boxShadow:"none", outline:"none", flexShrink:0
+  };
+  const iconBtn = { ...btnReset, width:34, height:34, borderRadius:6 };
+
+  // Shared icon helpers
+  const IcoChevronDown = () => (
+    <svg width="10" height="6" viewBox="0 0 10 6" fill="none">
+      <path d="M1 1l4 4 4-4" stroke="white" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+  const IcoChevronUp = () => (
+    <svg width="10" height="6" viewBox="0 0 10 6" fill="none">
+      <path d="M1 5l4-4 4 4" stroke="white" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+  const IcoHelp = () => (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="7.5" stroke="white" strokeWidth="1.4" opacity="0.8"/>
+      <path d="M6.8 6.8c0-1.2 1-2.2 2.2-2.2s2.2 1 2.2 2.2c0 1-.7 1.6-1.4 2-.6.4-.8.7-.8 1.2" stroke="white" strokeWidth="1.4" strokeLinecap="round" opacity="0.8"/>
+      <circle cx="9" cy="13" r="0.8" fill="white" opacity="0.8"/>
+    </svg>
+  );
+  const IcoSettings = () => (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="2.2" stroke="white" strokeWidth="1.4" opacity="0.8"/>
+      <path d="M9 1.5v1.8M9 14.7v1.8M1.5 9h1.8M14.7 9h1.8M3.63 3.63l1.27 1.27M13.1 13.1l1.27 1.27M3.63 14.37l1.27-1.27M13.1 4.9l1.27-1.27" stroke="white" strokeWidth="1.4" strokeLinecap="round" opacity="0.8"/>
+    </svg>
+  );
+  const IcoBell = () => (
+    <svg width="16" height="18" viewBox="0 0 16 18" fill="none">
+      <path d="M8 1a5.5 5.5 0 00-5.5 5.5v3.5L1 13h14l-1.5-3V6.5A5.5 5.5 0 008 1z" stroke="white" strokeWidth="1.4" strokeLinejoin="round" opacity="0.8"/>
+      <path d="M6.5 15c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5" stroke="white" strokeWidth="1.4" opacity="0.8"/>
+    </svg>
+  );
+  const IcoHamburger = () => (
+    <svg width="18" height="14" viewBox="0 0 18 14" fill="none">
+      <rect y="0"  width="18" height="2" rx="1" fill="white"/>
+      <rect y="6"  width="18" height="2" rx="1" fill="white"/>
+      <rect y="12" width="18" height="2" rx="1" fill="white"/>
+    </svg>
+  );
+  const IcoClose = () => (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <path d="M1.5 1.5l11 11M12.5 1.5l-11 11" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  );
+  const IcoEllipsis = () => (
+    <svg width="4" height="18" viewBox="0 0 4 18" fill="none">
+      <circle cx="2" cy="2"  r="1.5" fill="white" opacity="0.85"/>
+      <circle cx="2" cy="9"  r="1.5" fill="white" opacity="0.85"/>
+      <circle cx="2" cy="16" r="1.5" fill="white" opacity="0.85"/>
+    </svg>
+  );
+
+  // Avatar — Initials XS: light circle, dark "AC" text (matches Figma Avatar/Initials/XS)
+  const Avatar = () => (
+    <div style={{ position:"relative", width:40, height:40, flexShrink:0, cursor:"pointer" }}>
+      <div style={{ position:"absolute", inset:0, borderRadius:"50%",
+        background:"rgba(255,255,255,0.88)" }} />
+      <span style={{ position:"absolute", top:"50%", left:"50%",
+        transform:"translate(-50%, -50%)",
+        fontFamily:"'Red Hat Text',sans-serif", fontWeight:600, fontSize:14,
+        color:"#363636", lineHeight:"22px", whiteSpace:"nowrap" }}>AC</span>
+    </div>
+  );
+
+  // ── DESKTOP / TABLET nav (≥768px) ─────────────────────────────────────────
+  // Accounting module: icon + label + chevron | org logo + chevron | icons | avatar
+  // No search bar (Accounting module HeaderSearch is state="Off")
+  if (isNavDesktop) {
+    return (
+      <div className="unity-nav">
+
+        {/* LEFT ─────────────────────────────────────────────────────────────── */}
+        <div style={{ display:"flex", alignItems:"center", gap:0 }}>
+
+          {/* App switcher: Accounting icon (32px) + label + chevron */}
+          <button style={{ ...btnReset, display:"flex", alignItems:"center", gap:8,
+            height:50, padding:"0 14px 0 8px" }}>
+            <IcoAmplify size={32} />
+            {/* fontWeight:500 (Medium) — SemiBold/600 renders visually heavier in browser
+                than in Figma at 24px on dark bg. Spec says SemiBold; if Figma rendering
+                matches 600 for you, change this back. Flag as potential font-rendering gap. */}
+            <span style={{ fontFamily:"'Red Hat Text',sans-serif", fontWeight:500,
+              fontSize:24, color:"white", lineHeight:"32px",
+              letterSpacing:"0.0703px", whiteSpace:"nowrap" }}>Accounting</span>
+            <IcoChevronDown />
+          </button>
+
+          {/* Org switcher: Grace Fellowship logo + chevron, left border */}
+          <button style={{ ...btnReset, display:"flex", alignItems:"center", gap:16,
+            height:64, padding:"0 14px 0 24px",
+            borderLeft:"1px solid rgba(255,255,255,0.18)" }}>
+            <IcoGraceFellowship />
+            <IcoChevronDown />
+          </button>
+
+        </div>
+
+        {/* RIGHT: icon buttons + avatar ────────────────────────────────────── */}
+        <div style={{ display:"flex", alignItems:"center", gap:24 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10, width:210,
+            justifyContent:"flex-end" }}>
+            <button style={iconBtn} aria-label="Help"><IcoHelp /></button>
+            <button style={iconBtn} aria-label="Settings"><IcoSettings /></button>
+            <button style={iconBtn} aria-label="Notifications"><IcoBell /></button>
+          </div>
+          <Avatar />
+        </div>
+
+      </div>
+    );
+  }
+
+  // ── MOBILE nav (<768px) ───────────────────────────────────────────────────
+  // Layout (all absolute within 64px-tall bar):
+  //   left:8  → hamburger / close button (40×40 touch target)
+  //   left:57 → App Switcher: Accounting icon + chevron up (NOT centred)
+  //   right:65 → ellipsis (30×30)
+  //   right:13 → avatar (40×40)
+  return (
+    <div className="unity-nav" style={{ position:"relative" }}>
+
+      {/* Hamburger (≡) or Close (×) — at left edge */}
+      <button
+        onClick={onHamburgerClick}
+        style={{ ...btnReset, position:"absolute", left:8, top:"50%",
+          transform:"translateY(-50%)", width:40, height:40 }}
+        aria-label={navHidden ? "Open navigation" : "Close navigation"}>
+        {navHidden ? <IcoHamburger /> : <IcoClose />}
+      </button>
+
+      {/* App Switcher — immediately to right of hamburger, NOT centred */}
+      <button style={{ ...btnReset, position:"absolute", left:57, top:"50%",
+        transform:"translateY(-50%)", display:"flex", alignItems:"center", gap:6,
+        height:50 }}>
+        <IcoAmplify size={24} />
+        <IcoChevronUp />
+      </button>
+
+      {/* Ellipsis — right:65 */}
+      <button style={{ ...btnReset, position:"absolute", right:65, top:"50%",
+        transform:"translateY(-50%)", width:30, height:30 }}
+        aria-label="More options">
+        <IcoEllipsis />
+      </button>
+
+      {/* Avatar — right:13 */}
+      <div style={{ position:"absolute", right:13, top:"50%",
+        transform:"translateY(-50%)" }}>
+        <Avatar />
+      </div>
+
+    </div>
+  );
+}
+
+// ─── SCRIM ────────────────────────────────────────────────────────────────────
+// Shown behind the SideNav overlay on tablet (768–1023px) only.
+// Tablet overlay: rgba(0,0,0,0.32). Tap to dismiss.
+// Not shown on mobile — SideNav is full-width so nothing is behind it.
+function Scrim({ onClick }) {
+  return (
+    <div onClick={onClick}
+      style={{ position:"fixed", top:64, left:0, right:0, bottom:0,
+        background:"rgba(0,0,0,0.32)", zIndex:99,
+        animation:"scrimIn 250ms cubic-bezier(0.4,0,0.2,1) forwards" }} />
+  );
+}
+
 // ─── APP ──────────────────────────────────────────────────────────────────────
-// Default: View expanded, Balance Sheet active → View shows in TRAIL state.
-// Click View → collapse it → View shows COLLAPSED TRAIL (active fill + stripe).
+// Responsive layout: ≥1024px desktop (push), <1024px overlay.
+// Below 768px: SideNav fills full screen width when open.
+// 768–1023px: SideNav is 250px overlay with scrim.
+// Top nav is always present (fixed, 64px).
 function App() {
   const [activeId, setActiveId] = useState("balance_sheet");
+
+  // Compute correct initial values synchronously before first render.
+  // window.innerWidth is available immediately in a browser context.
+  const initW = window.innerWidth;
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(initW < 1024);
+  const [navHidden,         setNavHidden]        = useState(initW < 768);
+  const [viewportW,         setViewportW]        = useState(initW);
+
+  // Resize listener — updates viewportW on every resize event.
+  useEffect(() => {
+    const onResize = () => setViewportW(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  // When viewport crosses a breakpoint boundary, snap to correct defaults.
+  // Uses a ref to compare old vs new breakpoint so a pixel-nudge within the
+  // same zone does NOT override the user's manual collapse/expand choice.
+  const bpOf = w => w >= 1024 ? 2 : w >= 768 ? 1 : 0; // 2=desktop 1=tablet 0=mobile
+  const prevBp = useRef(bpOf(initW));
+  useEffect(() => {
+    const bp = bpOf(viewportW);
+    if (bp === prevBp.current) return;
+    prevBp.current = bp;
+    if (bp === 2) { setNavHidden(false); setSidebarCollapsed(false); }       // desktop → expanded
+    else if (bp === 1) { setNavHidden(false); setSidebarCollapsed(true); }   // tablet  → collapsed
+    else              { setSidebarCollapsed(true); }                          // mobile  → collapsed, hamburger controls hidden
+  }, [viewportW]);
+
+  const isDesktop   = viewportW >= 1024; // SideNav layout: push vs overlay
+  const isNavDesktop= viewportW >= 768;  // TopNav variant: full bar vs mobile
+  const isMobile    = viewportW < 768;   // full-width overlay + hamburger control
+  const isTablet    = viewportW >= 768 && viewportW < 1024; // overlay + scrim, no hamburger
+
+  // Overlay mode: <1024px AND nav is not hidden AND expanded
+  const isOverlay = !isDesktop && !navHidden && !sidebarCollapsed;
+
+  const handleHamburger = () => {
+    // Hamburger/close control only active on mobile (<768px)
+    if (!isMobile) return;
+    if (navHidden) {
+      setNavHidden(false);
+      setSidebarCollapsed(true);
+    } else {
+      setNavHidden(true);
+      setSidebarCollapsed(true);
+    }
+  };
+
+  // Navigate and close overlay on mobile
+  const handleNavigate = (id) => {
+    setActiveId(id);
+    if (!isDesktop && !sidebarCollapsed) setSidebarCollapsed(true);
+  };
+
   const all    = NAV.flatMap(item => item.children ? [item, ...item.children] : [item]);
   const active = all.find(i => i.id === activeId);
   const parent = NAV.find(i => i.children && i.children.some(c => c.id === activeId));
   const PageIconSource = NAV.find(i => i.id === activeId) || parent;
   const pageIconName = PageIconSource && PageIconSource.icon;
 
-  return (
-    <div style={{ display:"flex", height:"100vh", overflow:"hidden", background:"#f0f1f4" }}>
-      <SideNav activeId={activeId} onNavigate={setActiveId} />
+  // Overlay nav width: full screen on mobile, 250px on tablet
+  const overlayNavW = isMobile ? "100%" : 250;
 
-      {/* ── RIGHT COLUMN ── scrollable, two distinct zones ───────────────── */}
-      <div style={{ flex:1, overflowY:"auto", display:"flex", flexDirection:"column" }}>
+  return (
+    <div style={{ display:"flex", flexDirection:"column", height:"100vh",
+      overflow:"hidden", background:"#f0f1f4" }}>
+
+      {/* ── GLOBAL TOP NAV ── fixed, always on top ─────────────────────── */}
+      <TopNav
+        isNavDesktop={isNavDesktop}
+        navHidden={navHidden}
+        onHamburgerClick={handleHamburger}
+      />
+
+      {/* ── BODY AREA ── below top nav ──────────────────────────────────── */}
+      <div style={{ display:"flex", flex:1, overflow:"hidden",
+        marginTop:64, position:"relative" }}>
+
+        {/* Scrim — tablet overlay only (768–1023px) */}
+        {isOverlay && isTablet && (
+          <Scrim onClick={() => setSidebarCollapsed(true)} />
+        )}
+
+        {/* Overlay SideNav — tablet and mobile, when expanded */}
+        {isOverlay && !isDesktop && (
+          <div style={{ position:"fixed", top:64, left:0, bottom:0,
+            width: overlayNavW, zIndex:100,
+            animation:"navSlideIn 250ms cubic-bezier(0.4,0,0.2,1) forwards" }}>
+            <SideNav activeId={activeId} onNavigate={handleNavigate}
+              sidebarCollapsed={false}
+              onCollapseChange={v => { if(v) setSidebarCollapsed(true); }} />
+          </div>
+        )}
+
+        {/* Desktop or collapsed (in-flow) SideNav */}
+        {isDesktop ? (
+          <SideNav activeId={activeId} onNavigate={setActiveId}
+            sidebarCollapsed={sidebarCollapsed}
+            onCollapseChange={setSidebarCollapsed} />
+        ) : (
+          !navHidden && sidebarCollapsed && (
+            <SideNav activeId={activeId} onNavigate={handleNavigate}
+              sidebarCollapsed={true}
+              onCollapseChange={v => { if(!v) setSidebarCollapsed(false); }} />
+          )
+        )}
+
+        {/* ── RIGHT COLUMN ── scrollable ──────────────────────────────── */}
+        <div style={{ flex:1, overflowY:"auto", display:"flex", flexDirection:"column",
+          /* When overlay is open on mobile, content scrolls but is covered */
+          minWidth:0 }}>
 
         {/* ════════════════════════════════════════════════════════════════
             ZONE 1 — DEMO SCREEN
@@ -788,7 +1144,7 @@ function App() {
           background:"#e8eaf0", borderBottom:"1px solid #d8dae4",
           borderTop:"1px solid #d8dae4", position:"sticky", top:0, zIndex:10 }}>
           <div style={{ flex:1, height:1, background:"#c8cad6" }} />
-          <span style={{ fontSize:10, fontWeight:700, color:"#7880a0",
+          <span style={{ fontSize:12, fontWeight:700, color:"#7880a0",
             letterSpacing:"0.12em", textTransform:"uppercase", whiteSpace:"nowrap",
             fontFamily:"'Red Hat Text',sans-serif" }}>
             Component Documentation
@@ -804,7 +1160,7 @@ function App() {
 
           {/* shared styles */}
           {(() => {
-            const SH = { fontSize:12, fontWeight:700, color:"#7880a0", textTransform:"uppercase",
+            const SH = { fontSize:10, fontWeight:700, color:"#7880a0", textTransform:"uppercase",
               letterSpacing:"0.1em", margin:"0 0 12px", fontFamily:"'Red Hat Text',sans-serif" };
             const CARD = { background:"transparent", borderRadius:12, padding:"20px 24px",
               border:"1px solid #dde0ee", width:"100%" };
@@ -844,10 +1200,10 @@ function App() {
                   </div>
                   <a href="https://helloimjolopez-collab.github.io/pathwaytokens/SideNav-spec.md"
                     target="_blank" rel="noopener"
-                    style={{ display:"inline-flex", alignItems:"center", gap:7,
-                      padding:"10px 12px", borderRadius:8, background:"transparent",
-                      border:"1.5px solid #d2d2d2", color:"#3b3b3b",
-                      fontSize:16, fontWeight:500, lineHeight:"22px",
+                    style={{ display:"inline-flex", alignItems:"center", gap:6,
+                      padding:"6px 14px", borderRadius:6, background:"transparent",
+                      border:"1px solid #c0c8d6", color:"#3555a0",
+                      fontSize:14, fontWeight:500, lineHeight:"20px",
                       textDecoration:"none", fontFamily:"'Red Hat Text',sans-serif",
                       whiteSpace:"nowrap", flexShrink:0 }}>
                     View full spec →
@@ -857,8 +1213,9 @@ function App() {
                 {/* ── State Logic ── */}
                 <section>
                   <p style={SH}>State Logic</p>
-                  <div style={CARD}>
+                  <div style={{...CARD, overflowX:"auto"}}>
                     <p style={{...SUB, marginBottom:16}}>Click nav items to cycle through states in the demo above.</p>
+                    <div style={{ minWidth:460 }}>
                     {[
                       { label:"Base",                      fill:T.fill.navBase,   stripe:false, desc:"Resting — Fill/Contextual/NavItem/Base" },
                       { label:"Hover",                     fill:T.fill.navHover,  stripe:false, desc:"Fill/Contextual/NavItem/Hover" },
@@ -881,13 +1238,14 @@ function App() {
                         </div>
                       </div>
                     ))}
+                    </div>
                   </div>
                 </section>
 
                 {/* ── Token & Layout Reference ── */}
                 <section>
                   <p style={SH}>Token &amp; Layout Reference</p>
-                  <div style={CARD}>
+                  <div style={{...CARD, overflowX:"auto"}}>
                     <p style={{...SUB, marginBottom:16}}>
                       Primitive names are not surfaced by the <span style={CD}>get_variable_defs</span> Figma MCP tool — it resolves alias chains to final hex values only.
                       Rows marked <strong>no token</strong> have no semantic spacing tokens in Figma.
@@ -945,7 +1303,7 @@ function App() {
                 {/* ── Typography Token ── */}
                 <section>
                   <p style={SH}>Typography Token</p>
-                  <div style={{...CARD, maxWidth:620}}>
+                  <div style={{...CARD, maxWidth:620, overflowX:"auto"}}>
                     <div style={{ marginBottom:16, display:"flex", alignItems:"baseline",
                       gap:10, flexWrap:"wrap" }}>
                       <span style={{ fontFamily:"monospace", fontSize:13, color:"#3555a0",
@@ -979,7 +1337,8 @@ function App() {
           })()}
 
         </div>{/* end annotations zone */}
-      </div>{/* end right column */}
+        </div>{/* end right column */}
+      </div>{/* end body area */}
     </div>
   );
 }
