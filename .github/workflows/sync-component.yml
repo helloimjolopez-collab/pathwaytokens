@@ -1,8 +1,8 @@
-name: Sync SideNav-component.html
+name: Sync SideNav-figmamake.html
 
 # Runs whenever SideNav.html is changed on main.
-# Regenerates the stripped component-only file for Figma Make and
-# commits it back to the repo automatically.
+# Regenerates the Figma Make HTML (stripped of component documentation)
+# and commits it back to the repo automatically.
 
 on:
   push:
@@ -20,17 +20,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Regenerate SideNav-component.html
+      - name: Regenerate SideNav-figmamake.html
         run: python3 scripts/build-component.py
 
       - name: Commit if changed
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add SideNav-component.html
+          git add SideNav-figmamake.html
           if git diff --cached --quiet; then
-            echo "No changes to SideNav-component.html — skipping commit."
+            echo "No changes to SideNav-figmamake.html — skipping commit."
           else
-            git commit -m "chore: auto-sync SideNav-component.html from SideNav.html [skip ci]"
+            git commit -m "chore: auto-sync SideNav-figmamake.html from SideNav.html [skip ci]"
             git push
           fi

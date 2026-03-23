@@ -2,7 +2,7 @@
 """
 build-component.py
 ──────────────────
-Generates SideNav-component.html from SideNav.html by stripping the
+Generates SideNav-figmamake.html from SideNav.html by stripping the
 "Component Documentation" section.
 
 The cut is marker-based, not line-number-based, so it stays correct as
@@ -23,7 +23,7 @@ from pathlib import Path
 
 REPO_ROOT    = Path(__file__).parent.parent
 SOURCE       = REPO_ROOT / "SideNav.html"
-OUTPUT       = REPO_ROOT / "SideNav-component.html"
+OUTPUT       = REPO_ROOT / "SideNav-figmamake.html"
 CUT_MARKER   = "@COMPONENT_ONLY_END"
 RESUME_MARKER = "end right column"
 
