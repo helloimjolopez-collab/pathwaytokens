@@ -283,6 +283,8 @@ All `SideNavItem` labels at all levels use **the same** text style. There is no 
 4. `indicator.stripe` is only visible in **Active** and **Trail-collapsed** states.
 5. `indicator.stripe` color = `Icon/Contextual/NavItem/Active` (`#3555a0`) — same token as icon active.
 
+> **Standalone implementation rule — Trail-collapsed:** When a grouper is closed and any of its children is the active destination, apply **exactly the same 5 token values as Active state** to the grouper row: fill `#3555a014`, text `#051428`, icon `#3555a0`, stripe visible `#3555a0`. Trail-collapsed and Active are visually indistinguishable. The only difference is semantic: Active applies to a leaf destination; Trail-collapsed applies to a grouper whose active descendant is hidden. This rule applies whether the sidebar is 250px expanded or 72px collapsed.
+
 ---
 
 ## 7. `indicator.stripe` Sub-component
@@ -297,6 +299,8 @@ container.indicator (structural, 4px wide, full item height)
 ```
 
 The `container.indicator` column is **always present** on every `SideNavItem` (Level 0 and Level 1). It is a structural 4px spacer. The `indicator.stripe` inside it is only visually painted when the item is in Active or Trail-collapsed state.
+
+> **Implementation rule:** `container.indicator` must exist in the DOM / component tree at all times for every SideNavItem — it is not conditionally rendered. Only the visual paint of `indicator.stripe` is conditional (via `background: transparent` when hidden, `background: #3555a0` when visible). Removing the column from the DOM when hidden will cause layout shift as items jump 4px when the stripe appears.
 
 ---
 
@@ -788,6 +792,8 @@ A fifth value (>1900px) exists in the variables panel but is unused and unconfir
 
 **Push vs overlay:** At ≥1024px, the SideNav is in the page's layout flow — it takes up width. Below 1024px, the SideNav floats as an overlay above the content — it does not shift the page. This is a page-shell concern, not a SideNav component property.
 
+> **Implementation rule — layout architecture:** At ≥1024px: the page shell is `display: flex; flex-direction: row`. SideNav is a sibling of the content area with `width: 250px | 72px` and `flex-shrink: 0`. Content fills the remaining space. At <1024px: SideNav uses `position: fixed; left: 0; top: 64px; bottom: 0; width: 250px; z-index: 100` for the overlay panel. The 72px in-flow rail at tablet is a separate element; the 250px overlay slides over it. At <768px: there is no in-flow rail at all — only the overlay panel.
+
 **Top nav variant:** The global top nav shows its full desktop layout at ≥768px (no hamburger). Below 768px it switches to the mobile layout (hamburger/close, app icon, ellipsis, avatar). See §16.4 for details.
 
 ### 16.3 States below 1024px
@@ -900,55 +906,24 @@ A semi-transparent scrim is shown behind the SideNav whenever it is in expanded-
 
 ---
 
-## 17. AI Agent Implementation Guide (Figma Make and equivalents)
+## 17. AI Agent Implementation Guide
 
-This section is written for AI design and code agents. It is a self-contained brief: read it alongside the sections cited and you will produce a correct SideNav implementation.
+This section is for any AI agent implementing this component: Figma Make, Lovable, v0, Claude, Cursor, GitHub Copilot, or equivalent. It is a self-contained brief — read it alongside the sections cited.
 
 ---
 
 ### 17.1 Reference files
 
-| File | What it is | When to update it |
-|---|---|---|
-| `SideNav-figmamake.html` | **Static** visual spec sheet — pure HTML/CSS, no JavaScript. Every component state (all item states, CollapseButton both states, all breakpoint shells) visible simultaneously as labelled cards. This is the primary visual reference for any agent implementing this component. | Manually, when design tokens change, a new state is added, or breakpoint behaviour changes. It is NOT auto-generated. |
-| `SideNav-spec.md` (this file) | Token values, anatomy, state matrix, accessibility, responsiveness, interaction. | Maintained alongside the Figma component and the demo. |
-| `SideNav.html` | Interactive React demo — for developer reference and browser testing only. Do NOT use as an agent input file; it requires JavaScript execution and shows only one state at a time. | Maintained by the component owner. |
+| File | What it is |
+|---|---|
+| `SideNav-figmamake.html` | The interactive React prototype — same component as the full demo but without the spec annotations panel. Use this as the live visual and behavioural reference. It is responsive: resize the browser to see all three breakpoint states. Auto-synced from `SideNav.html` on every push. |
+| `SideNav-spec.md` (this file) | Token values, anatomy, state matrix, interaction, accessibility, responsiveness. The authoritative source for all implementation decisions. |
 
-> **For any agent:** use `SideNav-figmamake.html` + `SideNav-spec.md`. Do not use `SideNav.html` — it will not give you what you need.
-
----
-
-### 17.2 Understanding responsiveness — what to implement vs what to expect
-
-**The interactive demo (`SideNav.html`) uses CSS media queries and JavaScript state to adapt layout at runtime.** Figma and most design agents do not execute CSS or JavaScript. "Responsive" in Figma means **separate fixed-width frames per breakpoint**, each built independently with Figma auto-layout and constraints.
-
-Do not attempt to make a single Figma frame responsive. Instead, implement one frame per breakpoint:
-
-| Frame | Width | SideNav state |
-|---|---|---|
-| Desktop | 1440px (or fill) | SideNav in-flow, 250px expanded. No hamburger in TopNav. |
-| Desktop — collapsed | 1440px | SideNav in-flow, 72px rail. CollapseButton shows expand icon. |
-| Tablet | 768px | SideNav as 250px overlay drawer. Scrim behind it. Hamburger in TopNav. |
-| Mobile | 390px | SideNav hidden. Only hamburger in TopNav visible. Full-width content. |
-| Mobile — nav open | 390px | 250px overlay drawer + scrim. TopNav shows × icon. No CollapseButton inside nav. |
+Both files are needed. The HTML shows you what it looks like and how it behaves. The spec tells you the exact values and rules behind every decision.
 
 ---
 
-### 17.3 TopNav — always implement alongside SideNav
-
-TopNav and SideNav form a single shell. Never implement one without the other.
-
-**TopNav anatomy:**
-- Height: 64px. Background: `#0f3e80` (Brand Colors/Dark Cerulean).
-- Left side: app-switcher area → logo icon (32×32, rounded, white at 13% opacity) → "Amplify" (14px/600) + "Ministry Brands" (10px/400, white at 69% opacity).
-- Right side: app-switcher icon button (40×40, white at 8% opacity bg, rounded) → avatar (32×32 circle, `#5a7fc0`).
-- At tablet/mobile: hamburger (≡) or close (×) icon button appears on the LEFT, before the logo, depending on nav state. See §16.3.
-
----
-
-### 17.4 How to specify nav items
-
-Use this plain-text format. No tables or special syntax needed.
+### 17.2 How to specify nav items
 
 ```
 Items (in order):
@@ -958,53 +933,66 @@ Lion (grouper): Florence, Gabrielle
 Zebra (destination)
 ```
 
-- `(grouper)` = Level 0 item with children. Children are always Level 1 Destination items.
-- `(destination)` = Level 0 leaf item with no children.
+- `(grouper)` — Level 0 item with children. Children are always Level 1 Destination items.
+- `(destination)` — Level 0 leaf item, no children.
 - Children are listed after the colon, in order.
 
 ---
 
-### 17.5 CollapseButton — critical notes
+### 17.3 TopNav — always implement alongside SideNav
 
-> The CollapseButton is visible at **all breakpoints ≥768px**, in **both** expanded and collapsed sidebar states. It is hidden only on mobile (<768px).
-
-| Sidebar state | Icon | Label |
-|---|---|---|
-| Expanded 250px | `collapse_nav` | "Collapse" visible |
-| Collapsed 72px rail | `expand_nav` | Hidden — no room |
-| Mobile overlay | not rendered | — |
-
-Anatomy: 1px divider above it · `pl-12px` padding (not `px-8px` like SideNavItem) · **no indicator stripe column** · scrolls with content, not sticky. See §9.
-
----
-
-### 17.6 Grouper trail-collapsed state — critical notes
-
-> When a grouper is **closed** and one of its children is the **active destination**, the grouper row shows Trail-collapsed state. This is **visually identical to Active state**.
+TopNav and SideNav are a single shell. Never implement one without the other.
 
 | Property | Value |
 |---|---|
-| Background | `#3555a014` |
-| Text | `#051428` |
-| Icon | `#3555a0` |
-| `indicator.stripe` | visible, `#3555a0` |
-
-Applies at both 250px and 72px. See §6 rule 2 and §7.
+| Height | 64px |
+| Background | `#0f3e80` (Brand Colors/Dark Cerulean) |
+| Left — desktop (≥1024px) | Logo icon (32×32, `rgba(255,255,255,0.13)` bg, 6px radius) + "Amplify" (14px/600/white) + "Ministry Brands" (10px/400, `rgba(255,255,255,0.69)`) |
+| Left — tablet/mobile | Hamburger (≡) or close (×) button (40×40, `rgba(255,255,255,0.08)` bg, 8px radius), then logo |
+| Right | App-switcher button (40×40, same bg) + Avatar (32×32 circle, `#5a7fc0`) |
+| Hamburger shows when | Nav is hidden or collapsed at tablet/mobile |
+| × shows when | Nav overlay is open at tablet/mobile |
 
 ---
 
-### 17.7 Prompt template
+### 17.4 CollapseButton — do not skip
+
+> The CollapseButton renders at **all breakpoints ≥768px**, in **both** the 250px and 72px sidebar states. It is absent only on mobile (<768px).
+
+| Sidebar state | Renders? | Icon | Label |
+|---|---|---|---|
+| Expanded 250px, ≥768px | ✓ Yes | `collapse_nav` | "Collapse" — visible |
+| Collapsed 72px, ≥768px | ✓ Yes | `expand_nav` | Hidden (no room) |
+| Mobile overlay <768px | ✗ No | — | — |
+
+Anatomy: 1px divider (`#edf0f9`) above it · `pl-12px` (not `px-8px`) · no `indicator.stripe` column · scrolls with content, not sticky. Full detail at §9.
+
+---
+
+### 17.5 Trail-collapsed state — do not skip
+
+> When a grouper is closed and any child is the active destination, the grouper shows **Trail-collapsed** state. Apply the exact same tokens as Active state — they are visually identical.
+
+| Property | Token | Value |
+|---|---|---|
+| Background | `Fill/Contextual/NavItem/Active` | `#3555a014` |
+| Text | `Text/Contextual/NavItem/Active` | `#051428` |
+| Icon | `Icon/Contextual/NavItem/Active` | `#3555a0` |
+| `indicator.stripe` | visible | `#3555a0` |
+
+This applies whether the sidebar is 250px or 72px. Full detail at §6 and §7.
+
+---
+
+### 17.6 Prompt template
 
 ```
 Using SideNav-figmamake.html as the visual reference and SideNav-spec.md
-as the specification, implement the SideNav shell as Figma auto-layout frames.
+as the specification, implement the SideNav shell as a responsive prototype.
 Implement both the TopNav and the SideNav together — they form a single shell.
 
-Create one frame per breakpoint (desktop 1440px, tablet 768px, mobile 390px).
-Do not try to make a single responsive frame — implement each breakpoint separately.
-
 Use these nav items, in order:
-[your list — see §17.4 for format]
+[your list — see §17.2 for format]
 
 Use these icons:
 [your icon names and source, or attach SVG files]

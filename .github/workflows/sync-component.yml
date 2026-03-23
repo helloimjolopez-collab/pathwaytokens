@@ -1,20 +1,36 @@
-# This workflow is DISABLED.
-#
-# SideNav-figmamake.html is now a hand-authored static HTML spec sheet
-# (pure HTML/CSS, no JavaScript, all states visible simultaneously).
-# It is NOT auto-generated from SideNav.html.
-#
-# When to manually update SideNav-figmamake.html:
-#   - Design token values change (colours, radius, spacing)
-#   - A new component state is added or renamed
-#   - The CollapseButton behaviour changes
-#   - A new breakpoint or shell variant is added
-#
-# The build-component.py script has also been updated to refuse to run,
-# to prevent it accidentally overwriting the static file.
-#
-# on:               <- intentionally commented out so this workflow never triggers
-#   push:
-#     branches: [main]
-#     paths:
-#       - SideNav.html
+name: Sync SideNav-figmamake.html
+
+# Runs whenever SideNav.html is changed on main.
+# Regenerates SideNav-figmamake.html (the React demo stripped of the
+# Component Documentation section) and commits it back automatically.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - SideNav.html
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Regenerate SideNav-figmamake.html
+        run: python3 scripts/build-component.py
+
+      - name: Commit if changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add SideNav-figmamake.html
+          if git diff --cached --quiet; then
+            echo "No changes — skipping commit."
+          else
+            git commit -m "chore: auto-sync SideNav-figmamake.html from SideNav.html [skip ci]"
+            git push
+          fi
