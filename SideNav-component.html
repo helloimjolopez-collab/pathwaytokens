@@ -3,7 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SideNav — Pathway Design System</title>
+<title>SideNav Component — Pathway Design System</title>
+<!-- ═══════════════════════════════════════════════════════════════════════
+     SideNav-component.html  |  Pathway Design System / Ministry Brands Amplify
+     PURPOSE: Component-only reference for Figma Make.
+     Upload this file + SideNav-spec.md to Figma Make and prompt it to
+     re-implement the SideNav with your icons and nav labels.
+     This file contains only the live component demo — no spec annotations.
+     Spec: https://github.com/helloimjolopez-collab/pathwaytokens/blob/main/SideNav-spec.md
+     ═══════════════════════════════════════════════════════════════════════ -->
 <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Text:wght@400;500;600;700&Red+Hat+Display:wght@600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
@@ -1226,206 +1234,6 @@ function App() {
           </div>
         </div>
 
-        {/* ════════════════════════════════════════════════════════════════
-            DIVIDER — makes the transition from demo to docs unmistakable
-            ════════════════════════════════════════════════════════════════ */}
-        <div style={{ display:"flex", alignItems:"center", gap:14, padding:"14px 32px",
-          background:"#e8eaf0", borderBottom:"1px solid #d8dae4",
-          borderTop:"1px solid #d8dae4", position:"sticky", top:0, zIndex:10 }}>
-          <div style={{ flex:1, height:1, background:"#c8cad6" }} />
-          <span style={{ fontSize:12, fontWeight:700, color:"#7880a0",
-            letterSpacing:"0.12em", textTransform:"uppercase", whiteSpace:"nowrap",
-            fontFamily:"'Red Hat Text',sans-serif" }}>
-            Component Documentation
-          </span>
-          <div style={{ flex:1, height:1, background:"#c8cad6" }} />
-        </div>
-
-        {/* ════════════════════════════════════════════════════════════════
-            ZONE 2 — ANNOTATIONS / SPECIFICATIONS
-            ════════════════════════════════════════════════════════════════ */}
-        <div style={{ padding:"32px 32px 56px", display:"flex", flexDirection:"column", gap:28,
-          background:"#f0f1f4" }}>
-
-          {/* shared styles */}
-          {(() => {
-            const SH = { fontSize:10, fontWeight:700, color:"#7880a0", textTransform:"uppercase",
-              letterSpacing:"0.1em", margin:"0 0 12px", fontFamily:"'Red Hat Text',sans-serif" };
-            const CARD = { background:"transparent", borderRadius:12, padding:"20px 24px",
-              border:"1px solid #dde0ee", width:"100%" };
-            const BODY = { fontSize:13, color:"#4b4b4b", margin:0,
-              fontFamily:"'Red Hat Text',sans-serif", lineHeight:"20px",
-              wordBreak:"break-word", overflowWrap:"anywhere" };
-            const SUB = { fontSize:12, color:"#8890b0",
-              fontFamily:"'Red Hat Text',sans-serif", lineHeight:"18px" };
-            const GH = { fontSize:12, fontWeight:700, color:"#4b4b4b", margin:"0 0 10px",
-              fontFamily:"'Red Hat Text',sans-serif", textTransform:"uppercase",
-              letterSpacing:"0.06em" };
-            const CD = { fontFamily:"monospace", fontSize:12, color:"#3555a0",
-              background:"rgba(53,85,160,0.07)", padding:"1px 5px", borderRadius:3,
-              whiteSpace:"nowrap" };
-            const KBD = { background:"#e8eaf0", border:"1px solid #c4c8d6", borderRadius:3,
-              padding:"1px 6px", fontFamily:"monospace", fontSize:12, color:"#2a2d3a" };
-            const Row = ({ic, children, last}) => (
-              <div style={{ display:"flex", gap:12, padding:"10px 0",
-                borderBottom: last ? "none" : "1px solid #edf0f9", alignItems:"flex-start" }}>
-                {ic}
-                <p style={BODY}>{children}</p>
-              </div>
-            );
-            return (
-              <>
-                {/* ── Spec link ── */}
-                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
-                  gap:16, background:"transparent", border:"1px solid #dde0ee",
-                  borderRadius:12, padding:"18px 24px", flexWrap:"wrap" }}>
-                  <div>
-                    <p style={{ fontSize:13, fontWeight:600, color:"#02060d", margin:"0 0 3px",
-                      fontFamily:"'Red Hat Text',sans-serif" }}>SideNav — Component Spec</p>
-                    <p style={{ fontSize:12, color:"#8890b0", margin:0,
-                      fontFamily:"'Red Hat Text',sans-serif" }}>
-                      Tokens · anatomy · states · keyboard · ARIA · screen reader strings · Figma gaps
-                    </p>
-                  </div>
-                  <a href="https://github.com/helloimjolopez-collab/pathwaytokens/blob/main/SideNav-spec.md"
-                    target="_blank" rel="noopener"
-                    style={{ display:"inline-flex", alignItems:"center", gap:6,
-                      padding:"6px 14px", borderRadius:6, background:"transparent",
-                      border:"1px solid #c0c8d6", color:"#3555a0",
-                      fontSize:14, fontWeight:500, lineHeight:"20px",
-                      textDecoration:"none", fontFamily:"'Red Hat Text',sans-serif",
-                      whiteSpace:"nowrap", flexShrink:0 }}>
-                    View full spec →
-                  </a>
-                </div>
-
-                {/* ── State Logic ── */}
-                <section>
-                  <p style={SH}>State Logic</p>
-                  <div style={{...CARD, overflowX:"auto"}}>
-                    <p style={{...SUB, marginBottom:16}}>Click nav items to cycle through states in the demo above.</p>
-                    <div style={{ minWidth:460 }}>
-                    {[
-                      { label:"Base",                      fill:T.fill.navBase,   stripe:false, desc:"Resting — Fill/Contextual/NavItem/Base" },
-                      { label:"Hover",                     fill:T.fill.navHover,  stripe:false, desc:"Fill/Contextual/NavItem/Hover" },
-                      { label:"Active destination",        fill:T.fill.navActive, stripe:true,  desc:"Active fill + Icon/Contextual/NavItem/Active + indicator stripe" },
-                      { label:"Trail — grouper expanded",  fill:T.fill.navTrail,  stripe:false, desc:"Any expanded grouper — Trail fill, Text/Active, Icon/Base, no stripe" },
-                      { label:"Trail — grouper collapsed", fill:T.fill.navActive, stripe:true,  desc:"Collapsed grouper with active child — Active fill + stripe" },
-                    ].map(({ label, fill, stripe, desc }, idx, arr) => (
-                      <div key={label} style={{ display:"flex", alignItems:"center", gap:16,
-                        padding:"11px 0", borderBottom: idx < arr.length-1 ? `1px solid ${T.fill.infoSubtle}` : "none" }}>
-                        <div style={{ display:"flex", alignItems:"center", gap:4, flexShrink:0 }}>
-                          <div style={{ width:4, height:24, borderRadius:"0 4px 4px 0",
-                            backgroundColor: stripe ? T.indicator : "#e4e6ef" }} />
-                          <div style={{ width:96, height:24, borderRadius:5, backgroundColor:fill,
-                            border:"1px solid rgba(0,0,0,0.07)", flexShrink:0 }} />
-                        </div>
-                        <div style={{ minWidth:0 }}>
-                          <p style={{ fontWeight:600, fontSize:13, color:"#2a2d3a", margin:"0 0 2px",
-                            fontFamily:"'Red Hat Text',sans-serif" }}>{label}</p>
-                          <p style={{...SUB, margin:0}}>{desc}</p>
-                        </div>
-                      </div>
-                    ))}
-                    </div>
-                  </div>
-                </section>
-
-                {/* ── Token & Layout Reference ── */}
-                <section>
-                  <p style={SH}>Token &amp; Layout Reference</p>
-                  <div style={{...CARD, overflowX:"auto"}}>
-                    <p style={{...SUB, marginBottom:16}}>
-                      Primitive names are not surfaced by the <span style={CD}>get_variable_defs</span> Figma MCP tool — it resolves alias chains to final hex values only.
-                      Rows marked <strong>no token</strong> have no semantic spacing tokens in Figma.
-                    </p>
-                    <div style={{ overflowX:"auto" }}>
-                      <table style={{ width:"100%", borderCollapse:"collapse",
-                        fontFamily:"'Red Hat Text',sans-serif", minWidth:680 }}>
-                        <thead>
-                          <tr>
-                            {["Category","Semantic Token","Primitive","Value","Role"].map(h => (
-                              <th key={h} style={{ textAlign:"left", padding:"8px 12px",
-                                background:"#f4f5f8", fontWeight:700, fontSize:11,
-                                color:"#8890b0", textTransform:"uppercase", letterSpacing:"0.06em",
-                                borderBottom:"2px solid #e4e6f0", whiteSpace:"nowrap" }}>{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {TOKEN_ROWS.map(({ cat, semantic, prim, value, role }) => {
-                            const isWarn = cat.startsWith("⚠");
-                            const isGood = cat.startsWith("✓");
-                            const rowBg = isWarn ? "rgba(245,158,11,0.04)" : isGood ? "rgba(34,197,94,0.03)" : "transparent";
-                            return (
-                              <tr key={semantic} style={{ backgroundColor:rowBg }}>
-                                <td style={{ padding:"8px 12px", borderBottom:"1px solid #f0f1f4",
-                                  fontSize:12, color: isWarn ? "#b07800" : isGood ? "#166534" : "#777",
-                                  whiteSpace:"nowrap", verticalAlign:"top" }}>{cat}</td>
-                                <td style={{ padding:"8px 12px", borderBottom:"1px solid #f0f1f4",
-                                  fontSize:12, color: isWarn ? "#b07800" : isGood ? "#166534" : "#3555a0",
-                                  verticalAlign:"top" }}>{semantic}</td>
-                                <td style={{ padding:"8px 12px", borderBottom:"1px solid #f0f1f4",
-                                  fontSize:12, color:"#999", verticalAlign:"top" }}>{prim}</td>
-                                <td style={{ padding:"8px 12px", borderBottom:"1px solid #f0f1f4",
-                                  fontFamily:"monospace", fontSize:12, color:"#333", verticalAlign:"top",
-                                  whiteSpace:"nowrap" }}>
-                                  <div style={{ display:"flex", alignItems:"center", gap:7 }}>
-                                    {value.startsWith("#") && (
-                                      <div style={{ width:13, height:13, borderRadius:3, flexShrink:0,
-                                        backgroundColor:value, border:"1px solid rgba(0,0,0,0.1)" }} />
-                                    )}
-                                    {value}
-                                  </div>
-                                </td>
-                                <td style={{ padding:"8px 12px", borderBottom:"1px solid #f0f1f4",
-                                  fontSize:12, color:"#666", verticalAlign:"top" }}>{role}</td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </section>
-
-                {/* ── Typography Token ── */}
-                <section>
-                  <p style={SH}>Typography Token</p>
-                  <div style={{...CARD, maxWidth:620, overflowX:"auto"}}>
-                    <div style={{ marginBottom:16, display:"flex", alignItems:"baseline",
-                      gap:10, flexWrap:"wrap" }}>
-                      <span style={{ fontFamily:"monospace", fontSize:13, color:"#3555a0",
-                        background:"rgba(53,85,160,0.08)", padding:"3px 10px", borderRadius:4 }}>
-                        Label/Menu/L/Medium
-                      </span>
-                      <span style={{...SUB}}>— all nesting levels, no size variation</span>
-                    </div>
-                    {[
-                      ["--label/menu/l/medium/fontfamily",    "'Red Hat Text', sans-serif"],
-                      ["--label/menu/l/medium/fontweight",    "500 (Medium)"],
-                      ["--label/menu/l/medium/fontsize",      "16px"],
-                      ["--label/menu/l/medium/lineheight",    "22px"],
-                      ["--label/menu/l/medium/letterspacing", "0px"],
-                    ].map(([varName, val], i, arr) => (
-                      <div key={varName} style={{ display:"flex", alignItems:"baseline",
-                        gap:16, padding:"9px 0",
-                        borderBottom: i < arr.length-1 ? "1px solid #edf0f9" : "none",
-                        flexWrap:"wrap" }}>
-                        <code style={{ fontFamily:"monospace", fontSize:12, color:"#3555a0",
-                          flexShrink:0 }}>{varName}</code>
-                        <span style={{ fontSize:13, color:"#4b4b4b",
-                          fontFamily:"'Red Hat Text',sans-serif" }}>{val}</span>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-
-              </>
-            );
-          })()}
-
-        </div>{/* end annotations zone */}
         </div>{/* end right column */}
       </div>{/* end body area */}
     </div>
