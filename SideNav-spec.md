@@ -91,6 +91,31 @@ SideNav.Container
 
 ---
 
+## 2.1 Container Variants — Stroked vs Unstroked
+
+The `SideNav.Container` comes in two visual variants that control whether a visible border separates the nav panel from the page content. Both variants are available for the **expanded** (250px) and **collapsed** (72px) layout states, giving four possible combinations in total.
+
+### Default (unstroked)
+
+The nav surface (`#fafafa`) sits flush against the page background with no drawn border between them. This is the default option and should be used when the module's layout already creates sufficient visual separation — for example, when the page canvas uses a distinct background colour, or when a shadow or depth effect is present.
+
+### Stroked
+
+A 1px right-hand border (`border-right: 1px solid #edf0f9`) is rendered on the nav container. The stroke colour is `Fill/Static/Info/Subtle` (`#edf0f9`) — the same token used for the horizontal divider above the collapse control. This provides a visible, low-contrast seam between the nav and the content area.
+
+Use the stroked variant when modules need an explicit visual boundary — for example, when the page content background is also `#fafafa` (identical to the nav surface) and the two areas would otherwise appear merged.
+
+| Variant | Applies to | Token | Value |
+|---|---|---|---|
+| **Unstroked** | Expanded + Collapsed | *(no border)* | — |
+| **Stroked** | Expanded + Collapsed | `Fill/Static/Info/Subtle` | `#edf0f9` |
+
+> **Usage guidance:** Neither variant is "correct" — the choice belongs to the individual module team, not the design system. Use the variant that produces the clearest visual hierarchy for that module's specific page backgrounds.
+
+> **Figma:** Both variants (Expanded/Stroked, Expanded/Unstroked, Collapsed/Stroked, Collapsed/Unstroked) are available as separate component instances in the SideNavComponents frame.
+
+---
+
 ## 3. Design Tokens
 
 ### 3.1 Surface
@@ -120,9 +145,9 @@ SideNav.Container
 
 | Semantic Token | Primitive | Resolved Value | Used In |
 |---|---|---|---|
-| `Text/Contextual/NavItem/Base` | — | `#4b4b4b` | Label default |
-| `Text/Contextual/NavItem/Hover` | — | `#363636` | Label hover |
-| `Text/Contextual/NavItem/Active` | — | `#02060d` | Active destination **and** all trail states |
+| `Text/Contextual/NavItem/Base` | — | `#363636` | Label default |
+| `Text/Contextual/NavItem/Hover` | — | `#252525` | Label hover |
+| `Text/Contextual/NavItem/Active` | — | `#051428` | Active destination **and** all trail states |
 
 > Trail text color = `Text/Contextual/NavItem/Active`. This applies to both **expanded** trail (grouper showing children) and **collapsed** trail (grouper with hidden active child). Do not use `Text/Contextual/NavItem/Base` for trail.
 
@@ -130,13 +155,13 @@ SideNav.Container
 
 | Semantic Token | Primitive | Resolved Value | Used In |
 |---|---|---|---|
-| `Icon/Contextual/NavItem/Base` | — | `#606060` | Icon default + expanded-trail icon |
+| `Icon/Contextual/NavItem/Base` | — | `#4b4b4b` | Icon default + expanded-trail icon |
 | `Icon/Contextual/NavItem/Hover` | — | `#3b3b3b` | Icon hover |
 | `Icon/Contextual/NavItem/Active` | — | `#3555a0` | Active icon + collapsed-trail icon + `indicator.stripe` color |
 
 > `Icon/Contextual/NavItem/Active` (`#3555a0`) is used for **three things simultaneously**: the leading icon, the indicator stripe, and the collapsed-trail icon. They share the same token.
 
-> Expanded trail icon = `Icon/Contextual/NavItem/Base` (`#606060`). Do not use active blue for expanded trail icons.
+> Expanded trail icon = `Icon/Contextual/NavItem/Base` (`#4b4b4b`). Do not use active blue for expanded trail icons.
 
 ### 3.5 Geometry
 
@@ -431,8 +456,8 @@ Both appear with an **8px gap** from the container's right edge (`left: calc(100
 | Padding | `4px 12px` | — |
 | Border radius | `8px` | `Border/Radius/S` |
 | Typography | 14px / 400 / 20px / 0.02px | `Text/Body/S/Regular` |
-| Text colour (base) | `#4b4b4b` | `Text/Contextual/NavItem/Base` |
-| Text colour (hover) | `#363636` | `Text/Contextual/NavItem/Hover` |
+| Text colour (base) | `#363636` | `Text/Contextual/NavItem/Base` |
+| Text colour (hover) | `#252525` | `Text/Contextual/NavItem/Hover` |
 | Fill (hover) | `rgba(17,17,17,0.04)` | `Fill/Contextual/NavItem/Hover` |
 
 ### 10.4 Hover-safe interaction
@@ -646,10 +671,10 @@ All values below use token resolved values. Verify with a tool (e.g. Colour Cont
 
 | State | Text token → hex | Background | Approx. ratio | WCAG AA (4.5:1) |
 |---|---|---|---|---|
-| Base | `Text/NavItem/Base` → `#4b4b4b` on `#fafafa` | ~6.3:1 | ✅ Pass |
-| Hover | `Text/NavItem/Hover` → `#363636` on `≈#f5f5f5` | ~9.3:1 | ✅ Pass |
-| Active | `Text/NavItem/Active` → `#02060d` on `≈#eef1f8` | ~19:1 | ✅ Pass |
-| Trail (expanded) | `Text/NavItem/Active` → `#02060d` on `≈#f5f5f5` | ~19:1 | ✅ Pass |
+| Base | `Text/NavItem/Base` → `#363636` on `#fafafa` | ~11.6:1 | ✅ Pass |
+| Hover | `Text/NavItem/Hover` → `#252525` on `≈#f5f5f5` | ~14.1:1 | ✅ Pass |
+| Active | `Text/NavItem/Active` → `#051428` on `≈#eef1f8` | ~16.3:1 | ✅ Pass |
+| Trail (expanded) | `Text/NavItem/Active` → `#051428` on `≈#f5f5f5` | ~17.9:1 | ✅ Pass |
 | `indicator.stripe` | `Icon/NavItem/Active` → `#3555a0` on `#fafafa` | Non-text UI component | ✅ 3:1 (WCAG 1.4.11) |
 | Focus ring (proposed) | `#3555a0` outline on `#fafafa` | Non-text UI component | ✅ 3:1 — verify with tool |
 
