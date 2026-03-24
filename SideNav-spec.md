@@ -1049,5 +1049,19 @@ Requirements — implement all of these, do not skip any:
    These are two different sizes — do not use 18px for nav item icons.
 
 Match all spacing, colours, states, and responsive breakpoints from the spec.
+
+Before submitting, verify this checklist — these two are the most commonly skipped:
+
+[ ] CollapseButton is visible at the BOTTOM of the SideNav at all viewports
+    >=768px. Check BOTH states: expanded 250px (shows icon + "Collapse" label)
+    and collapsed 72px rail (shows icon only, no label). It must be absent only
+    on mobile (<768px). If you cannot see a collapse/expand icon at the bottom
+    of the nav in your desktop or tablet preview, it is missing.
+
+[ ] At 768-1023px viewport the SideNav renders as a 72px icon-only rail in the
+    normal page flow by default — it is NOT hidden, and NOT treated as mobile.
+    The main content fills the remaining width to the right of the 72px rail.
+    Only after the user taps the expand icon does the 250px overlay appear.
+    Treating this breakpoint as mobile (hiding the nav entirely) is wrong.
 ```
 
