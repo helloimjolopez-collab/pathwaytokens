@@ -725,13 +725,9 @@ function SideNav({ activeId, onNavigate, sidebarCollapsed, onCollapseChange, hid
         {/* Spacer pushes collapse button to bottom */}
         <div style={{ flex:1 }} />
 
-        {/* ⚠️ REQUIRED: Collapse_Expand_Nav_Container — ALWAYS IN DOM.
-            Always rendered. Hidden ONLY on mobile (<768px) via display:none.
-            At ALL ≥768px breakpoints in BOTH states:
-              - Expanded (250px): shows collapse_nav icon + "Collapse" label
-              - Collapsed (72px): shows expand_nav icon, label hidden (no room)
-            Sits at the bottom of the nav list (pushed down by flex:1 spacer above).
-            Does NOT have an indicator.stripe column. Uses pl-[12px] not px-[8px]. */}
+        {/* Collapse_Expand_Nav_Container: pt-[4px] gap-[4px].
+            Always in DOM; display:none on mobile (<768px) where no 72px rail exists.
+            Full spec: §9. */}
         <div style={{ paddingTop:L.collapseGap, display: hideCollapseButton ? "none" : "block" }}>
           <CollapseButton isSidebarCollapsed={sidebarCollapsed}
             onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
@@ -1152,12 +1148,7 @@ function App() {
             sidebarCollapsed={sidebarCollapsed}
             onCollapseChange={setSidebarCollapsed} />
         ) : (
-          // ⚠️ REQUIRED: Tablet in-flow collapsed rail — DO NOT OMIT OR HIDE.
-          // isTablet = viewport 768–1023px. At this breakpoint the SideNav is a
-          // 72px icon-only rail that sits IN the page layout flow (not an overlay).
-          // It is visible BY DEFAULT — not hidden, not triggered by a button.
-          // Content fills the remaining width to the right of the 72px rail.
-          // This is NOT mobile behaviour. Do not treat 768–1023px as mobile.
+          // Tablet (768–1023px): 72px icon-only rail in layout flow by default.
           isTablet && !navHidden && sidebarCollapsed && (
             <SideNav activeId={activeId} onNavigate={handleNavigate}
               sidebarCollapsed={true}
