@@ -1209,9 +1209,21 @@ function App() {
             </div>
           </div>
 
+          {/* ⚠️ MAIN CONTENT AREA — IMPLEMENTATION INSTRUCTIONS:
+              DO NOT add welcome messages, product descriptions, feature lists,
+              or any other custom text content here.
+              DO NOT write "Welcome to [org name]" or similar.
+              DO NOT describe navigation features or spec details here.
+              ONLY implement:
+                1. A page heading showing the ACTIVE NAV ITEM NAME as an <h1>
+                   with its icon — updates dynamically on every nav click
+                2. Three empty placeholder card boxes with dashed borders
+                3. One wider placeholder card box below them
+              This area is purely a placeholder shell. Nav state drives the heading.
+              No other content belongs here. Copy this structure exactly. */}
           {/* Page content area */}
           <div style={{ padding:"32px 32px 36px" }}>
-            {/* Page heading */}
+            {/* Page heading — shows active nav item name, updates on every click */}
             <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:28 }}>
               {pageIconName && (
                 <div style={{ width:44, height:44, borderRadius:11, flexShrink:0,

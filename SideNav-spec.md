@@ -1038,10 +1038,14 @@ Requirements — implement all of these, do not skip any:
    closed (or sidebar is 72px collapsed), the grouper shows Active-state styling:
    same background fill, stripe indicator, text and icon colour as an active item.
 
-4. Main content area: to the right of the SideNav, show a page heading (name +
-   icon of the currently active nav item, updating on every navigation) and 3
-   empty placeholder card containers with dashed borders. No custom text content
-   or feature descriptions — placeholder structure only, driven by nav state.
+4. Main content area — copy the placeholder structure from the HTML exactly:
+   - A page heading (<h1>) showing the active nav item name + its icon.
+     This updates dynamically on every nav click.
+   - Three empty card containers in a row with dashed borders.
+   - One wider empty card container below them.
+   DO NOT add a welcome message, org name, product description, feature list,
+   or any other custom text. Do not write "Welcome to [anything]".
+   The heading is the only text, and it comes from the nav item name.
 
 5. Collapsed sidebar width: 72px (not 64px). Expanded: 250px.
 
