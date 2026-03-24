@@ -725,19 +725,17 @@ function SideNav({ activeId, onNavigate, sidebarCollapsed, onCollapseChange, hid
         {/* Spacer pushes collapse button to bottom */}
         <div style={{ flex:1 }} />
 
-        {/* ⚠️ REQUIRED: Collapse_Expand_Nav_Container — DO NOT OMIT.
-            This renders at ALL ≥768px breakpoints in BOTH states:
+        {/* ⚠️ REQUIRED: Collapse_Expand_Nav_Container — ALWAYS IN DOM.
+            Always rendered. Hidden ONLY on mobile (<768px) via display:none.
+            At ALL ≥768px breakpoints in BOTH states:
               - Expanded (250px): shows collapse_nav icon + "Collapse" label
               - Collapsed (72px): shows expand_nav icon, label hidden (no room)
-            It is ONLY absent on mobile (<768px) via hideCollapseButton=true.
             Sits at the bottom of the nav list (pushed down by flex:1 spacer above).
             Does NOT have an indicator.stripe column. Uses pl-[12px] not px-[8px]. */}
-        {!hideCollapseButton && (
-          <div style={{ paddingTop:L.collapseGap }}>
-            <CollapseButton isSidebarCollapsed={sidebarCollapsed}
-              onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
-          </div>
-        )}
+        <div style={{ paddingTop:L.collapseGap, display: hideCollapseButton ? "none" : "block" }}>
+          <CollapseButton isSidebarCollapsed={sidebarCollapsed}
+            onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
+        </div>
       </div>
     </nav>
   );
@@ -1154,13 +1152,13 @@ function App() {
             sidebarCollapsed={sidebarCollapsed}
             onCollapseChange={setSidebarCollapsed} />
         ) : (
-          // ⚠️ REQUIRED: Tablet in-flow collapsed rail — DO NOT OMIT.
-          // At 768–1023px the SideNav shows as a 72px icon-only rail in the layout flow
-          // BY DEFAULT. It is NOT hidden and NOT an overlay at this breakpoint.
-          // The rail takes up 72px of horizontal layout space (content fills the rest).
-          // User taps the expand icon inside the rail → triggers 250px overlay.
-          // This render fires when: tablet width AND nav not hidden AND sidebar is collapsed.
-          !navHidden && sidebarCollapsed && !isMobile && (
+          // ⚠️ REQUIRED: Tablet in-flow collapsed rail — DO NOT OMIT OR HIDE.
+          // isTablet = viewport 768–1023px. At this breakpoint the SideNav is a
+          // 72px icon-only rail that sits IN the page layout flow (not an overlay).
+          // It is visible BY DEFAULT — not hidden, not triggered by a button.
+          // Content fills the remaining width to the right of the 72px rail.
+          // This is NOT mobile behaviour. Do not treat 768–1023px as mobile.
+          isTablet && !navHidden && sidebarCollapsed && (
             <SideNav activeId={activeId} onNavigate={handleNavigate}
               sidebarCollapsed={true}
               onCollapseChange={v => { if(!v) setSidebarCollapsed(false); }} />
