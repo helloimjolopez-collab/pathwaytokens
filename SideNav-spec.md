@@ -235,8 +235,8 @@ All `SideNavItem` labels at all levels use **the same** text style. There is no 
 | Collapse row left padding | `pl-[12px]` | 12 | **None** |
 | Collapse row right padding | `pr-[8px]` | 8 | **None** |
 | `Collapse_Expand_Nav_Container` top padding / gap | `pt-[4px]` `gap-[4px]` | 4 | **None** |
-| Icon.Leading inner size (nav items) |: | 14 | **None**: `Accessibility/Icon Wrapping/Large` covers 24px wrapper only. Do not confuse with CollapseButton icon which is 18px |
-| CollapseButton icon size (collapse/expand nav) |: | 18 | **None**: separate icon, different size from nav item Icon.Leading |
+| Icon.Leading inner size (nav items) |: | 14 | **None**: `Accessibility/Icon Wrapping/Large` covers 24px wrapper only |
+| CollapseButton icon size (collapse/expand nav) |: | 18 | **None**: separate icon, distinct from nav item Icon.Leading (see §9) |
 | `Container.RowEnd` dimensions |: | 40×24px | **None** |
 | `Container.RowEnd.Icon` dimensions |: | 24×24px | `Accessibility/Icon Wrapping/Large` |
 | Chevron icon size |: | 10pt | **None** |
@@ -247,7 +247,7 @@ All `SideNavItem` labels at all levels use **the same** text style. There is no 
 
 ### Level 0: Destination
 - Has `Container.LeadingIcon` (24×24) with `Icon.Leading` (14pt fill-style icon)
-- **No `Container.RowEnd`**: destinations omit the right-side container entirely. Do not render an empty placeholder div for it.
+- **No `Container.RowEnd`**: destinations omit the right-side container entirely. Only groupers have a `Container.RowEnd`.
 - Interacts: click → sets active state
 
 ### Level 0: Grouper
