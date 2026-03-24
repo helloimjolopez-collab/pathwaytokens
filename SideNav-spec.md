@@ -224,7 +224,7 @@ All `SideNavItem` labels at all levels use **the same** text style. There is no 
 | Nav container horizontal padding | `px-[12px]` | 12 | **None** |
 | Nav container vertical padding | `py-[14px]` | 14 | **None** |
 | SideNav expanded width |: | 250 | **None** |
-| SideNav collapsed width |: | 64 | **None** |
+| SideNav collapsed width |: | 72 | **None**: breaks down as 12px left padding + 48px item + 12px right padding |
 | Gap between nav items | `gap-[8px]` | 8 | **None** |
 | SideNavMenu bottom padding | `pb-[24px]` | 24 | **None** |
 | `Container.rowStart` horizontal padding | `px-[8px]` | 8 | **None** |
@@ -235,7 +235,8 @@ All `SideNavItem` labels at all levels use **the same** text style. There is no 
 | Collapse row left padding | `pl-[12px]` | 12 | **None** |
 | Collapse row right padding | `pr-[8px]` | 8 | **None** |
 | `Collapse_Expand_Nav_Container` top padding / gap | `pt-[4px]` `gap-[4px]` | 4 | **None** |
-| Icon.Leading inner size |: | 14 | **None**: `Accessibility/Icon Wrapping/Large` covers 24px wrapper only |
+| Icon.Leading inner size (nav items) |: | 14 | **None**: `Accessibility/Icon Wrapping/Large` covers 24px wrapper only. Do not confuse with CollapseButton icon which is 18px |
+| CollapseButton icon size (collapse/expand nav) |: | 18 | **None**: separate icon, different size from nav item Icon.Leading |
 | `Container.RowEnd` dimensions |: | 40×24px | **None** |
 | `Container.RowEnd.Icon` dimensions |: | 24×24px | `Accessibility/Icon Wrapping/Large` |
 | Chevron icon size |: | 10pt | **None** |
@@ -246,7 +247,7 @@ All `SideNavItem` labels at all levels use **the same** text style. There is no 
 
 ### Level 0: Destination
 - Has `Container.LeadingIcon` (24×24) with `Icon.Leading` (14pt fill-style icon)
-- Has `Container.RowEnd` (40×24): **empty** for destinations (no chevron)
+- **No `Container.RowEnd`**: destinations omit the right-side container entirely. Do not render an empty placeholder div for it.
 - Interacts: click → sets active state
 
 ### Level 0: Grouper
@@ -313,7 +314,7 @@ The `container.indicator` column is **always present** on every `SideNavItem` (L
 ### 8.2 Dimensions & Padding
 ```
 Expanded:  width 250px, padding 14px 12px
-Collapsed: width  64px, padding 14px 12px (same, text hidden)
+Collapsed: width  72px, padding 14px 12px (same, text hidden)
 ```
 > No semantic tokens for width or padding: see §4 for gap documentation.
 
@@ -534,7 +535,7 @@ This is a CSS architectural constraint, not a Figma design concern. No Figma ann
 | Click grouper (collapsed sidebar) | No expand: show flyout popover instead |
 | Hover any item | Hover fill + hover text + hover icon |
 | Hover grouper in collapsed sidebar | Show flyout popover with group label + children |
-| Click Collapse button | Sidebar width transition to 64px |
+| Click Collapse button | Sidebar width transition to 72px |
 | Click Expand button | Sidebar width transition to 250px |
 
 ---
@@ -660,7 +661,7 @@ The entire nav is a single Tab stop. Arrow keys navigate within it.
 | Tree label | `<ul role="tree" aria-label="Main navigation">`: ensures the landmark is named and SR announces "tree" on entry | 📋 Required |
 | Grouper state | `aria-expanded="true/false"` on grouper treeitems only: SR announces "expanded" or "collapsed". Do not put `aria-expanded` on leaf destination items. | 📋 Required |
 | Active page | `aria-current="page"` on the active destination: SR announces "current page" | ✅ Implemented in demo |
-| Icon-only collapsed sidebar | When collapsed to 64px, labels are hidden visually. Each item needs a text alternative: `aria-label` on the item or a visually-hidden `<span>`. Do not rely on the icon alone. | 📋 Not in demo |
+| Icon-only collapsed sidebar | When collapsed to 72px, labels are hidden visually. Each item needs a text alternative: `aria-label` on the item or a visually-hidden `<span>`. Do not rely on the icon alone. | 📋 Not in demo |
 | Collapsed grouper children | When a grouper is collapsed, its children must be removed from DOM or `aria-hidden="true"`: not just visually hidden with CSS | 📋 Demo uses conditional render: correct approach |
 | Collapse/Expand button | `aria-label="Collapse navigation"` when expanded, `aria-label="Expand navigation"` when collapsed. Update dynamically as state changes. | 📋 Not in demo |
 | Depth announcement | Screen readers announce depth automatically from the markup nesting: do not add manual "level 1 / level 2" text | ✅ Handled by correct markup |
@@ -994,7 +995,11 @@ Anatomy: 1px divider (`#edf0f9`) above it · `pl-12px` (not `px-8px`) · no `ind
 
 ### 17.5 Trail-collapsed state: do not skip
 
-> When a grouper is closed and any child is the active destination, the grouper shows **Trail-collapsed** state. Apply the exact same tokens as Active state: they are visually identical.
+> When a grouper is closed and one of its children is the active destination, the grouper itself shows **Trail-collapsed** state. This looks identical to Active state.
+
+**Trigger logic:** `isTrailCollapsed = grouper has an active child AND (grouper is closed OR sidebar is collapsed to 72px)`
+
+Concrete example: user clicks "Hyena" (child of Elephant). Elephant's children show, Hyena is active. User then collapses Elephant. Elephant's children hide. Elephant now shows Trail-collapsed: same background fill, same stripe, same text/icon colour as if Elephant itself were active.
 
 | Property | Token | Value |
 |---|---|---|
@@ -1011,15 +1016,38 @@ This applies whether the sidebar is 250px or 72px. Full detail at §6 and §7.
 
 ```
 Using SideNav-figmamake.html as the visual reference and SideNav-spec.md
-as the specification, implement the SideNav shell as a responsive prototype.
-Implement both the TopNav and the SideNav together: they form a single shell.
+as the specification, implement a responsive prototype with TopNav + SideNav.
 
-Use these nav items, in order:
+Nav items (in order):
 [your list: see §17.2 for format]
 
-Use these icons:
-[your icon names and source, or attach SVG files]
+Icons:
+[your icon names / attach SVG files — nav item icons render at 14px inside 24px wrapper]
 
-Match all spacing, colours, and states from the spec exactly.
+Requirements — implement all of these, do not skip any:
+
+1. TopNav and SideNav together as a single shell. Never one without the other.
+
+2. CollapseButton inside the SideNav at all breakpoints ≥768px, in both expanded
+   and collapsed states. On mobile (<768px) it is hidden. In the collapsed 72px
+   state it shows the expand icon with no label. In the expanded 250px state it
+   shows the collapse icon + "Collapse" label. It sits at the bottom of the nav,
+   scrolls with content, and has a 1px divider above it.
+
+3. Trail-collapsed state: when a grouper's child is active and the grouper is
+   closed (or sidebar is 72px collapsed), the grouper shows Active-state styling:
+   same background fill, stripe indicator, text and icon colour as an active item.
+
+4. Main content area: to the right of the SideNav, show a page heading (name +
+   icon of the currently active nav item, updating on every navigation) and 3
+   empty placeholder card containers with dashed borders. No custom text content
+   or feature descriptions — placeholder structure only, driven by nav state.
+
+5. Collapsed sidebar width: 72px (not 64px). Expanded: 250px.
+
+6. Nav item icons: 14px inside a 24×24 wrapper. CollapseButton icon: 18px.
+   These are two different sizes — do not use 18px for nav item icons.
+
+Match all spacing, colours, states, and responsive breakpoints from the spec.
 ```
 
